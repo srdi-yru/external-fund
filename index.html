@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="th" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SRDI External Fund — ระบบรับคำขอออกใบเสร็จรับเงิน งบประมาณวิจัยจากแหล่งทุนภายนอก</title>
+<meta name="description" content="ยื่นคำขอออกใบเสร็จรับเงินสำหรับงบประมาณวิจัยจากแหล่งทุนภายนอก และติดตามสถานะทุกขั้นตอน — สถาบันวิจัยและพัฒนาชายแดนภาคใต้ มหาวิทยาลัยราชภัฏยะลา">
+<meta name="color-scheme" content="light dark">
+<meta name="robots" content="index,follow">
+
+<!-- ไอคอนและรูปแบ่งปัน (ไฟล์อยู่ในโฟลเดอร์ assets/ ที่คัดมาทั้งชุด) -->
+<link rel="icon" href="assets/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/icon-32.png">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<meta property="og:title" content="SRDI External Fund — ระบบรับคำขอออกใบเสร็จรับเงิน (สวพ.ชต. มรย.)">
+<meta property="og:description" content="ยื่นคำขอออกใบเสร็จรับเงินสำหรับงบประมาณวิจัยจากแหล่งทุนภายนอก และติดตามสถานะทุกขั้นตอน">
+<meta property="og:image" content="assets/og-image.png">
+<meta property="og:type" content="website">
+
+<!-- ฟอนต์ธีม STAR: Prompt (หัวข้อ/ปุ่ม/ตัวเลข) + Anuphan (เนื้อความ) — ล็อกตามมติ SM-D26 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700;800&family=Anuphan:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- แถบเตือนระดับหน้า: ยังไม่ตั้ง API_URL / เชื่อมต่อหลังบ้านไม่ได้ -->
+<div id="appBanner" class="app-banner" style="display:none" role="alert"></div>
+
+<!-- แถบเตือน "โหมดทดสอบ" — ขึ้นเองเมื่อ config.test_mode = true (มติ EF-D27) -->
+<div id="testBanner" class="app-banner" style="display:none" role="status"></div>
+
+<!-- แถบบน: โลโก้จริง + ชื่อระบบ (เติมจาก config) + เมนู (เติมจาก JS) -->
+<header class="topbar" id="topbar">
+  <div class="wrap">
+    <button class="brand" id="brand" data-page="home" aria-label="ไปหน้าหลัก">
+      <img class="logo-img" src="assets/srdi_logo.png" alt="โลโก้ สถาบันวิจัยและพัฒนาชายแดนภาคใต้ มหาวิทยาลัยราชภัฏยะลา">
+      <span class="btxt"><b id="brandTitle">SRDI External Fund</b><span id="brandSub">งบประมาณวิจัยจากแหล่งทุนภายนอก · สวพ.ชต. มรย.</span></span>
+    </button>
+    <div class="spacer"></div>
+    <nav class="tabs" id="tabs" aria-label="เมนูหลัก"></nav>
+  </div>
+</header>
+
+<!-- แถบผู้ใช้: บอกสถานะการยืนยันอีเมลของผู้ขอรับบริการ -->
+<div class="userbar" id="userbar"><div class="wrap">
+  <div class="who" id="who"></div>
+  <button class="linkbtn" id="feedbackLink" data-act="feedback">💬 แจ้งปัญหา/ข้อเสนอแนะ</button>
+</div></div>
+
+<!-- เนื้อหาหลัก (JS render ตามหน้า) -->
+<main><div class="wrap" id="stage" aria-live="polite"></div></main>
+
+<footer class="foot" id="foot"><div class="wrap">
+  SRDI External Fund 2.0 · สถาบันวิจัยและพัฒนาชายแดนภาคใต้ มหาวิทยาลัยราชภัฏยะลา<br>
+  <span id="footContact">โทรภายใน 31004 · Kantakan.u@yru.ac.th</span> · อิงมาตรฐาน WCAG 2.2
+</div></footer>
+
+<!-- modal กลาง (ยืนยันการบันทึก · แบบประเมิน · กู้รหัส · กล่องแจ้งปัญหา) -->
+<div class="overlay" id="ov"><div class="modal" id="modal" role="dialog" aria-modal="true" aria-label="กล่องโต้ตอบ"></div></div>
+
+<script src="app.js" defer></script>
+</body>
+</html>
