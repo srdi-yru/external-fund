@@ -32,7 +32,7 @@
    (ห้ามใช้ URL ที่ลงท้ายด้วย /dev — ตัวนั้นใช้ได้เฉพาะตอนที่ท่านล็อกอินบัญชีเจ้าของสคริปต์อยู่)
    ดูขั้นตอนใน README_Phase2_วิธีติดตั้ง.md หมวด 14 (ตาราง "บัญชีจุดที่ต้องกรอกเอง")
 */
-const API_URL = 'https://script.google.com/macros/s/AKfycbydKxpRgWhFxBgxT4Dfk-YMzaM8s_Gi797ylvabLSM-G5yQO57nith6VrCwQKqn9f80-w/exec';
+const API_URL = 'PASTE_WEBAPP_EXEC_URL_HERE';
 
 /* ============================================================
    0) ค่าคงที่ของหน้าเว็บ
@@ -493,9 +493,12 @@ function homeV() {
     + '  <div class="msg info">การขอเบิกงวดถัดไป ระบบจะถามยืนยันเรื่องการล้างหนี้งวดเดิมก่อนเสมอ</div>'
     + '</div>';
 }
+/** การ์ดอธิบายขั้นตอนบนหน้าแรก
+    ★ ห้ามใช้คลาส .stat .num กับข้อความยาว — คลาสนั้นของธีม STAR ทำไว้สำหรับ "ตัวเลขสถิติ"
+      (28px หนา 800 บรรทัดชิด) พอใส่ประโยคยาวจะใหญ่เกินและตัดบรรทัดกลางคำ */
 function card(t, s) {
-  return '<div class="panel lift"><div class="stat"><div class="num"><b>' + esc(t) + '</b></div>'
-    + '<div class="lbl" style="margin-top:8px">' + esc(s) + '</div></div></div>';
+  return '<div class="panel lift"><h3 class="cardh">' + esc(t) + '</h3>'
+    + '<p class="cardp">' + esc(s) + '</p></div>';
 }
 function stepListHtml() {
   const steps = (CFG && CFG.status_steps && CFG.status_steps.length)
