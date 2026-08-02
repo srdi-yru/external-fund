@@ -32,7 +32,7 @@
    (ห้ามใช้ URL ที่ลงท้ายด้วย /dev — ตัวนั้นใช้ได้เฉพาะตอนที่ท่านล็อกอินบัญชีเจ้าของสคริปต์อยู่)
    ดูขั้นตอนใน README_Phase2_วิธีติดตั้ง.md หมวด 14 (ตาราง "บัญชีจุดที่ต้องกรอกเอง")
 */
-const API_URL = 'https://script.google.com/macros/s/AKfycbydKxpRgWhFxBgxT4Dfk-YMzaM8s_Gi797ylvabLSM-G5yQO57nith6VrCwQKqn9f80-w/exec';
+const API_URL = 'PASTE_WEBAPP_EXEC_URL_HERE';
 
 /* ============================================================
    0) ค่าคงที่ของหน้าเว็บ
@@ -321,6 +321,42 @@ function toast(m) {
 }
 function openM(html) { $('modal').innerHTML = html; $('ov').classList.add('show'); }
 function closeM() { $('ov').classList.remove('show'); $('modal').innerHTML = ''; }
+
+/* ★ EF-S14 (ชุด A) — คัดลอกข้อความลงคลิปบอร์ด
+   ทำไมต้องมีทางถอย 2 ชั้น: navigator.clipboard ใช้ได้เฉพาะหน้าเว็บที่เป็น https
+   (Cloudflare Pages เป็น https อยู่แล้ว) แต่ถ้าใครเปิดจากไฟล์ในเครื่องหรือเบราว์เซอร์เก่า
+   มันจะเงียบไปเฉย ๆ — ปุ่มที่กดแล้วไม่มีอะไรเกิดขึ้นแย่กว่าไม่มีปุ่ม */
+async function copyToClipboard(text) {
+  const s = String(text == null ? '' : text);
+  if (!s) return false;
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(s);
+      return true;
+    }
+  } catch (e) { /* ตกลงมาใช้ทางถอยข้างล่าง */ }
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = s;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.top = '-1000px';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return !!ok;
+  } catch (e) { return false; }
+}
+
+/* ★ EF-S14 — ปุ่ม "คัดลอกรหัสบริการ" บนหน้าผลสำเร็จ (อ่านรหัสจาก FORM.result ไม่ส่งผ่าน onclick) */
+async function copyServiceId() {
+  const sid = String((FORM.result || {}).service_id || '');
+  if (!sid) { toast('ยังไม่มีรหัสบริการให้คัดลอก'); return; }
+  const ok = await copyToClipboard(sid);
+  if (ok) toast('คัดลอกรหัส ' + sid + ' แล้ว');
+  else toast('เบราว์เซอร์นี้คัดลอกอัตโนมัติไม่ได้ — กรุณาลากเมาส์คัดลอกรหัสด้านบนแทน');
+}
 
 /* แบนเนอร์ระดับหน้า */
 function showBanner(msg, isErr) {
@@ -1414,6 +1450,12 @@ function formDoneV() {
     + '<h3>บันทึกคำขอรับบริการเรียบร้อยแล้ว</h3>'
     + '<p>โปรดจดหรือถ่ายภาพ "รหัสบริการ" ด้านล่างไว้ใช้ติดตามสถานะ</p>'
     + '<div class="resultid">' + esc(r.service_id || '—') + '</div>'
+    // ★ EF-S14 (ชุด A) — ปุ่มคัดลอกรหัส · เดิมผู้ใช้ต้องลากเมาส์คัดลอกเอง ซึ่งบนมือถือทำยากมาก
+    + (r.service_id
+        ? '<div class="btns" style="justify-content:center;margin:-4px 0 10px">'
+          + '<button class="btn ghost" id="btnCopySid" onclick="copyServiceId()">📋 คัดลอกรหัสบริการ</button>'
+          + '</div>'
+        : '')
     + '<p class="help">เลขที่ธุรกรรมงวดนี้: ' + esc(r.transaction_id || '—')
     + ' · สถานะปัจจุบัน: ' + esc(r.status || '—') + '</p>'
     + flags
@@ -1767,6 +1809,12 @@ async function submitEvaluationNow() {
     closeM();
     toast((d && d.message) ? d.message : 'บันทึกแบบประเมินเรียบร้อย');
     TRACK.items = null;                                   // สถานะเปลี่ยนแล้ว ต้องดึงใหม่
+    // 🔴 ชุด A — บั๊กที่เจอตอนเดินจริงในเบราว์เซอร์ (กับดักข้อ 31):
+    //   หน้ารายละเอียดจำข้อมูลไว้ใน DETAIL.data และ detailAfter() จะโหลดใหม่ก็ต่อเมื่อ "sid เปลี่ยน"
+    //   ผู้ใช้ที่เข้าดูรายละเอียดก่อน แล้วค่อยทำแบบประเมิน พอกดกลับเข้าหน้ารายละเอียดใบเดิม
+    //   จะเห็นของเก่าที่ยังไม่มีลิงก์ใบเสร็จ ทั้งที่ประเมินไปแล้ว → นึกว่าระบบไม่ให้ไฟล์
+    //   ตัวตรวจ static จับไม่ได้เพราะโค้ดทุกบรรทัดถูกต้องหมด ผิดแค่ "จังหวะล้างของเก่า"
+    DETAIL.data = null; DETAIL.err = '';
     if (S.page === 'evaluate') go('track', { sid: TRACK.only });
     else loadTrack();
   } catch (err) {
