@@ -271,6 +271,34 @@ input[readonly],textarea[readonly]{background:var(--panel2);color:var(--ink2);cu
 .stars span:focus-visible{outline:3px solid var(--green2);outline-offset:2px;border-radius:6px}
 .starlabel{font-size:13.5px;font-weight:600;margin-bottom:5px}
 
+/* ==================================================================
+   ★ เฟส 3 — หน้าเจ้าหน้าที่ (คิวงาน · แดชบอร์ด)
+   ใช้ตัวแปรสีของธีมทั้งหมด ไม่ประกาศสีใหม่ (มติ SM-D26)
+   ================================================================== */
+
+/* ---- การ์ดงาน 1 แถวในคิว/ตาราง ---- */
+.stafftask{border:1px solid var(--line);border-radius:var(--r);padding:13px 15px;margin-bottom:11px;background:var(--panel2)}
+.stafftask .st-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:7px}
+.stafftask .st-body{font-size:13.5px;display:flex;flex-direction:column;gap:3px}
+.stafftask .st-body a{color:var(--green);font-weight:600}
+
+/* ---- แถบควบคุมในแถว (เลือกสถานะ + หมายเหตุ + ไฟล์ + ปุ่ม) ---- */
+.rowact{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+.rowact select,.rowact input[type=text]{font-family:inherit;font-size:13.5px;padding:8px 10px;border:1px solid var(--line);
+  border-radius:10px;background:var(--panel);color:var(--ink)}
+.rowact input[type=text]{flex:1;min-width:190px}
+.rowact input[type=file]{font-size:12.5px;max-width:100%}
+.rowact .btn{padding:8px 15px;font-size:13.5px}
+.rowact .err-tx{flex-basis:100%}
+
+/* ---- กราฟแท่งแนวนอนแบบ CSS ล้วน (ไม่พึ่งไลบรารีภายนอก) ---- */
+.barrow{display:grid;grid-template-columns:minmax(90px,32%) 1fr auto;gap:9px;align-items:center;margin-bottom:7px;font-size:12.5px}
+.barlbl{color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bartrack{background:var(--panel2);border-radius:999px;height:11px;overflow:hidden}
+.barfill{background:var(--green);height:100%;border-radius:999px;min-width:2px}
+.barval{font-family:'Prompt';font-weight:700;color:var(--ink);white-space:nowrap}
+@media(max-width:640px){.barrow{grid-template-columns:1fr auto}.barlbl{grid-column:1/-1}}
+
 /* ---- ★ โหมดพิมพ์ "แบบคำขอ" (SPEC หมวด 9.5 — ซ่อน navbar ตอนพิมพ์) ---- */
 @media print{
   .topbar,.userbar,.foot,.app-banner,.overlay,.toast,.noprint,.btn{display:none!important}

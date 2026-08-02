@@ -32,23 +32,30 @@
    (ห้ามใช้ URL ที่ลงท้ายด้วย /dev — ตัวนั้นใช้ได้เฉพาะตอนที่ท่านล็อกอินบัญชีเจ้าของสคริปต์อยู่)
    ดูขั้นตอนใน README_Phase2_วิธีติดตั้ง.md หมวด 14 (ตาราง "บัญชีจุดที่ต้องกรอกเอง")
 */
-const API_URL = 'https://script.google.com/macros/s/AKfycbydKxpRgWhFxBgxT4Dfk-YMzaM8s_Gi797ylvabLSM-G5yQO57nith6VrCwQKqn9f80-w/exec';
+const API_URL = 'PASTE_WEBAPP_EXEC_URL_HERE';
 
 /* ============================================================
    0) ค่าคงที่ของหน้าเว็บ
    ============================================================ */
 const API_PLACEHOLDER = 'PASTE_WEBAPP_EXEC_URL_HERE';
 const API_TIMEOUT_MS  = 45000;        // ไฟล์แนบทำให้ช้ากว่าปกติ จึงเผื่อไว้ 45 วินาที
-const PAGES = ['home', 'form', 'track', 'detail', 'evaluate', 'recover'];
+/* ★ เฟส 3 เพิ่ม 3 หน้า: staff (เข้าสู่ระบบเจ้าหน้าที่) · admin (แดชบอร์ด) · assistant (คิวงาน) */
+const PAGES = ['home', 'form', 'track', 'detail', 'evaluate', 'recover', 'staff', 'admin', 'assistant'];
 const TABS = [
   { id: 'home',  t: 'หน้าหลัก' },
   { id: 'form',  t: '📝 ยื่นคำขอ', cta: 1 },
   { id: 'track', t: '🔎 ติดตามสถานะ' }
 ];
+/* แท็บที่โผล่เฉพาะตอนเจ้าหน้าที่เข้าสู่ระบบแล้ว (ผู้ใช้ทั่วไปไม่เห็น) */
+const STAFF_TABS = {
+  admin:     [{ id: 'admin',     t: '📊 แดชบอร์ด' }, { id: 'assistant', t: '🧾 คิวงาน' }],
+  assistant: [{ id: 'assistant', t: '🧾 คิวงาน' }]
+};
 
-/* วัตถุประสงค์ของ OTP — ★ 2 ใบนี้ใช้แทนกันไม่ได้ (มติ EF-D22) */
+/* วัตถุประสงค์ของ OTP — ★ 3 ใบนี้ใช้แทนกันไม่ได้ (มติ EF-D22) */
 const PURPOSE_SUBMIT = 'requester_submit';   // ยื่นคำขอ
 const PURPOSE_VIEW   = 'requester_view';     // ดู / ทำแบบประเมิน
+const PURPOSE_STAFF  = 'staff_login';        // ★ เจ้าหน้าที่ (คนละใบกับ 2 ใบบน)
 
 /* ★ รายการตัวเลือกคงที่ 3 ชุด (SPEC หมวด 9.4 — ถ้อยคำห้ามเปลี่ยนแม้แต่ตัวอักษรเดียว)
    เก็บสำรองไว้ในหน้าเว็บเพื่อให้ฟอร์มยังวาดได้ถ้า config ยังโหลดไม่เสร็จ
@@ -83,6 +90,35 @@ const FALLBACK_FUNDING_SOURCES = [
 ];
 const FALLBACK_FEEDBACK_CATEGORIES = ['แจ้งปัญหาการใช้งาน', 'ข้อเสนอแนะ', 'สอบถาม', 'อื่น ๆ'];
 
+/* ★ ข้อความหน้าแรก/popup ที่ผู้ดูแลแก้ได้จากแท็บ UIText ในชีต (มติ EF-D44)
+   ค่าจริงมาจาก CFG.ui_text · ชุดนี้เป็นค่าสำรองไว้ให้หน้าเว็บยังวาดได้ถ้า config โหลดไม่ทัน
+   ★★ ต้องตรงกับ INITIAL_UI_TEXT ใน Config.gs ทุกตัวอักษร — ตัวตรวจ frontend-check เทียบให้ทุกรอบ */
+const FALLBACK_UI_TEXT = {
+  HOME_HERO_TITLE_1:  'ยื่นคำขอ',
+  HOME_HERO_TITLE_HL: 'ออกใบเสร็จรับเงิน',
+  HOME_HERO_TITLE_2:  'งบประมาณวิจัยจากแหล่งทุนภายนอก',
+  HOME_HERO_SUB:      'กรอกแบบคำขอออนไลน์ แนบหลักฐานการรับโอนเงิน แล้วติดตามได้ทุกขั้นตอนจนถึงวันรับสำเนาใบเสร็จรับเงิน — ยืนยันตัวตนด้วยรหัส OTP ทางอีเมล ไม่ต้องสมัครสมาชิก',
+  HOME_BTN_FORM:      '📝 เริ่มยื่นคำขอ',
+  HOME_BTN_TRACK:     '🔎 ติดตามสถานะ',
+  HOME_STEPS_TITLE:   'ขั้นตอนการให้บริการ',
+  HOME_STEPS_BADGE:   '5 ขั้น',
+  HOME_CARD1_TITLE:   '1 · เตรียมเอกสาร',
+  HOME_CARD1_TEXT:    'หลักฐานการรับโอนเงินงวดนี้ (รูปภาพหรือ PDF) และหลักฐานการชำระค่าธรรมเนียมการโอนกับงานการคลัง มรย. ถ้ามี',
+  HOME_CARD2_TITLE:   '2 · กรอกแบบคำขอ 3 ขั้น',
+  HOME_CARD2_TEXT:    'ข้อมูลผู้ขอรับบริการ → เลือกบริการ (โครงการใหม่ / งวดถัดไป) → รายละเอียดงบประมาณ',
+  HOME_CARD3_TITLE:   '3 · รับรหัสบริการ',
+  HOME_CARD3_TEXT:    'ระบบส่งรหัสบริการไปที่อีเมลของท่าน ใช้รหัสนี้อ้างอิงและติดตามสถานะได้ตลอด',
+  HOME_NOTICE_TITLE:  'ข้อควรทราบก่อนใช้บริการ',
+  HOME_NOTICE_WARN:   'กรุณา "งด" ให้ข้อมูลผู้ขอรับบริการ "แทนผู้อื่น" เนื่องจากจะมีผลต่อการรับเอกสารและข้อความแจ้งเตือนทางอีเมล',
+  HOME_NOTICE_INFO:   'การขอเบิกงวดถัดไป ระบบจะถามยืนยันเรื่องการล้างหนี้งวดเดิมก่อนเสมอ',
+  POPUP_NOTICE_ENABLED: 'TRUE',
+  POPUP_NOTICE_TITLE: '⚠️ ประกาศสำคัญ',
+  POPUP_NOTICE_BODY:  'กรุณา "งด" ให้ข้อมูลผู้ขอรับบริการ "แทนผู้อื่น" เนื่องจากจะมีผลต่อการรับเอกสารและข้อความแจ้งเตือนทางอีเมล',
+  POPUP_NOTICE_BTN:   'รับทราบ',
+  POPUP_DEBT_ENABLED: 'TRUE',
+  POPUP_CONFIRM_SUBMIT_ENABLED: 'TRUE'
+};
+
 /* หน่วยงานที่ต้องระบุหน่วยงานย่อยเพิ่ม · ประเภทบุคลากรที่ต้องระบุชื่อโครงการที่รับผิดชอบ
    (เงื่อนไขเดียวกับที่ Service.gs ตรวจฝั่งเซิร์ฟเวอร์ — หน้าเว็บตรวจซ้ำเพื่อบอกผู้ใช้ก่อน) */
 const FACULTY_NEEDS_SUBUNIT = 'สำนักงานอธิการบดี';
@@ -115,7 +151,11 @@ const STATUS_DOT = {
    ============================================================ */
 let S    = { page: 'home', theme: 'light', sid: '', tid: '' };
 let CFG  = null;                       // config จากหลังบ้าน
-let AUTH = { submit: null, view: null };  // token 2 ใบ แยกกันเด็ดขาด (มติ EF-D22)
+let AUTH = { submit: null, view: null, staff: null };  // token 3 ใบ แยกกันเด็ดขาด (มติ EF-D22)
+/* สถานะของหน้าเจ้าหน้าที่ (เฟส 3) */
+let DASH  = { loading: false, err: '', data: null, chart: 'count', fy: 0 };
+let QUEUE = { loading: false, err: '', data: null };
+let ROWACT = {};   // ค่าที่เจ้าหน้าที่กำลังกรอกในแถว: {tid: {to, comment, file}}
 let FORM = newForm();
 let TRACK = { loading: false, err: '', items: null, only: '' };
 let DETAIL = { loading: false, err: '', data: null };
@@ -237,6 +277,19 @@ function staffTypes()     { return (CFG && CFG.staff_types     && CFG.staff_type
 function faculties()      { return (CFG && CFG.faculties       && CFG.faculties.length)       ? CFG.faculties       : FALLBACK_FACULTIES; }
 function fundingSources() { return (CFG && CFG.funding_sources && CFG.funding_sources.length) ? CFG.funding_sources : FALLBACK_FUNDING_SOURCES; }
 function feedbackCats()   { return (CFG && CFG.feedback_categories && CFG.feedback_categories.length) ? CFG.feedback_categories : FALLBACK_FEEDBACK_CATEGORIES; }
+
+/* ★ ข้อความจากแท็บ UIText (มติ EF-D44) — ชีตชนะโค้ด · ไม่มีค่า = ใช้ค่าสำรองในไฟล์นี้ */
+function uiText(key) {
+  const v = (CFG && CFG.ui_text) ? CFG.ui_text[key] : null;
+  if (v != null && String(v).trim() !== '') return String(v);
+  return FALLBACK_UI_TEXT[key] != null ? FALLBACK_UI_TEXT[key] : '';
+}
+/* ★ สวิตช์เปิด-ปิด popup จากแท็บ UIText — ค่าที่อ่านไม่ออก = ถือว่าเปิด (ปลอดภัยกว่า) */
+function uiBool(key) {
+  const raw = String(uiText(key) || '').trim().toLowerCase();
+  if (raw === '') return true;
+  return !(raw === 'false' || raw === 'no' || raw === '0' || raw === 'n' || raw === 'ไม่');
+}
 function staffTypeNeedsProject(v) { const l = staffTypes(); return String(v || '') === l[l.length - 1]; }
 
 /* ★ กับดักข้อ 25: <option value="อื่นๆ"> แต่ข้อความบนจอคือ "อื่นๆ โปรดระบุ"
@@ -309,6 +362,9 @@ function markFieldBad(state, id, errId, msg) {
    ============================================================ */
 const TK_SUBMIT = 'ef_tok_submit';
 const TK_VIEW   = 'ef_tok_view';
+/* ★ เฟส 3: token ของเจ้าหน้าที่เก็บที่เดียวกัน (sessionStorage) ตามมติ EF-D42
+   เหตุผลยิ่งหนักกว่าเดิม — ใบนี้เปิดดูคำขอได้ทุกใบและเดินสถานะได้ ปิดแท็บแล้วต้องหาย */
+const TK_STAFF  = 'ef_tok_staff';
 
 function tokRead(key) {
   try {
@@ -323,34 +379,51 @@ function tokRead(key) {
 function tokWrite(key, obj) { try { sessionStorage.setItem(key, JSON.stringify(obj)); } catch (e) {} }
 function tokRemove(key) { try { sessionStorage.removeItem(key); } catch (e) {} }
 
-function loadTokens() { AUTH.submit = tokRead(TK_SUBMIT); AUTH.view = tokRead(TK_VIEW); }
+function loadTokens() {
+  AUTH.submit = tokRead(TK_SUBMIT);
+  AUTH.view   = tokRead(TK_VIEW);
+  AUTH.staff  = tokRead(TK_STAFF);
+}
 function saveToken(kind, d) {
   const minutes = Number(d && d.expires_in_min) || 120;
   const obj = {
     token: d.token,
     email: (d.user && d.user.email) || '',
     name:  (d.user && d.user.name) || '',
+    role:  (d.user && d.user.role) || '',
     exp:   Date.now() + minutes * 60000
   };
-  if (kind === 'view') { AUTH.view = obj; tokWrite(TK_VIEW, obj); }
-  else { AUTH.submit = obj; tokWrite(TK_SUBMIT, obj); }
+  if (kind === 'view')       { AUTH.view = obj;   tokWrite(TK_VIEW, obj); }
+  else if (kind === 'staff') { AUTH.staff = obj;  tokWrite(TK_STAFF, obj); }
+  else                       { AUTH.submit = obj; tokWrite(TK_SUBMIT, obj); }
 }
 function clearToken(kind) {
-  if (kind === 'view') { AUTH.view = null; tokRemove(TK_VIEW); }
-  else { AUTH.submit = null; tokRemove(TK_SUBMIT); }
+  if (kind === 'view')       { AUTH.view = null;   tokRemove(TK_VIEW); }
+  else if (kind === 'staff') { AUTH.staff = null;  tokRemove(TK_STAFF); }
+  else                       { AUTH.submit = null; tokRemove(TK_SUBMIT); }
 }
 function clearTokenByValue(tk) {
   if (!tk) return;
   if (AUTH.submit && AUTH.submit.token === tk) clearToken('submit');
   if (AUTH.view && AUTH.view.token === tk) clearToken('view');
+  if (AUTH.staff && AUTH.staff.token === tk) clearToken('staff');
 }
-function tokenOf(kind) { const t = (kind === 'view') ? AUTH.view : AUTH.submit; return t ? t.token : ''; }
+function tokenOf(kind) {
+  const t = (kind === 'view') ? AUTH.view : (kind === 'staff') ? AUTH.staff : AUTH.submit;
+  return t ? t.token : '';
+}
+/** บทบาทของเจ้าหน้าที่ที่เข้าสู่ระบบอยู่ ('' = ยังไม่เข้าสู่ระบบ) */
+function staffRole() { return AUTH.staff ? String(AUTH.staff.role || '') : ''; }
+function isStaff()   { return staffRole() === 'admin' || staffRole() === 'assistant'; }
 
 /** ออกจากการยืนยันตัวตนทั้งหมด (ปุ่มบนแถบผู้ใช้) */
 async function doSignOut() {
-  const tks = [tokenOf('submit'), tokenOf('view')].filter(Boolean);
-  clearToken('submit'); clearToken('view');
+  const tks = [tokenOf('submit'), tokenOf('view'), tokenOf('staff')].filter(Boolean);
+  clearToken('submit'); clearToken('view'); clearToken('staff');
   FORM = newForm(); TRACK = { loading: false, err: '', items: null, only: '' }; DETAIL = { loading: false, err: '', data: null };
+  DASH = { loading: false, err: '', data: null, chart: 'count', fy: 0 };
+  QUEUE = { loading: false, err: '', data: null };
+  ROWACT = {};
   for (let i = 0; i < tks.length; i++) {
     try { await api('logout', { token: tks[i], client_hint: clientHint() }); } catch (e) {}
   }
@@ -380,8 +453,10 @@ function toggleTheme() { setTheme(S.theme === 'light' ? 'dark' : 'light'); }
 
 function buildBars() {
   const cur = (S.page === 'detail' || S.page === 'evaluate') ? 'track' : S.page;
+  // ★ เฟส 3: แท็บของเจ้าหน้าที่โผล่เฉพาะตอนเข้าสู่ระบบแล้ว (ตัวจริงยังตรวจสิทธิ์ฝั่งเซิร์ฟเวอร์ทุกครั้ง)
+  const tabs = TABS.concat(isStaff() ? (STAFF_TABS[staffRole()] || []) : []);
   $('tabs').innerHTML =
-    TABS.map(function (x) {
+    tabs.map(function (x) {
       return '<button class="tab ' + (cur === x.id ? 'active' : '') + ' ' + (x.cta ? 'cta' : '') + '"'
         + ' data-page="' + x.id + '"' + (cur === x.id ? ' aria-current="page"' : '') + '>' + x.t + '</button>';
     }).join('')
@@ -389,7 +464,12 @@ function buildBars() {
 
   const who = $('who');
   const t = AUTH.view || AUTH.submit;
-  if (t) {
+  if (isStaff()) {
+    const roleTh = staffRole() === 'admin' ? 'ผู้ดูแลระบบ' : 'ผู้ช่วย';
+    who.innerHTML = '<span class="rolepill">🔐 ' + esc(roleTh) + '</span> <b>' + esc(AUTH.staff.name || AUTH.staff.email) + '</b>'
+      + ' <span style="color:var(--ink3)">' + esc(AUTH.staff.email) + '</span>'
+      + ' <button class="linkbtn" data-act="signout" style="margin-left:6px">ออกจากระบบ</button>';
+  } else if (t) {
     who.innerHTML = '<span class="rolepill">ยืนยันอีเมลแล้ว</span> <b>' + esc(t.email) + '</b>'
       + ' <button class="linkbtn" data-act="signout" style="margin-left:6px">ออกจากการยืนยัน</button>';
   } else {
@@ -435,46 +515,61 @@ function applyRoute() {
     const want = S.sid || '';
     if (TRACK.only !== want) { TRACK.only = want; TRACK.items = null; TRACK.err = ''; }
   }
+  // ★ เฟส 3: ยังไม่เข้าสู่ระบบเจ้าหน้าที่ → เด้งไปหน้าเข้าสู่ระบบ (เกราะบนจอ · ของจริงตรวจที่เซิร์ฟเวอร์)
+  if ((S.page === 'admin' || S.page === 'assistant') && !isStaff()) S.page = 'staff';
+  // ผู้ช่วยเปิดหน้าแดชบอร์ดของ admin ไม่ได้
+  if (S.page === 'admin' && staffRole() !== 'admin') S.page = 'assistant';
+  // เข้าสู่ระบบแล้วยังกดหน้า staff → พาไปหน้างานของบทบาทนั้นเลย
+  if (S.page === 'staff' && isStaff()) S.page = (staffRole() === 'admin') ? 'admin' : 'assistant';
 }
 function renderFromUrl() { readRoute(); applyRoute(); render(); }
 
 function render() {
   buildBars();
   const st = $('stage');
-  if (S.page === 'home')          st.innerHTML = homeV();
-  else if (S.page === 'form')     st.innerHTML = formV();
-  else if (S.page === 'track')    st.innerHTML = trackV();
-  else if (S.page === 'evaluate') st.innerHTML = trackV();
-  else if (S.page === 'detail')   st.innerHTML = detailV();
-  else if (S.page === 'recover')  st.innerHTML = recoverV();
-  else                            st.innerHTML = homeV();
+  if (S.page === 'home')            st.innerHTML = homeV();
+  else if (S.page === 'form')       st.innerHTML = formV();
+  else if (S.page === 'track')      st.innerHTML = trackV();
+  else if (S.page === 'evaluate')   st.innerHTML = trackV();
+  else if (S.page === 'detail')     st.innerHTML = detailV();
+  else if (S.page === 'recover')    st.innerHTML = recoverV();
+  else if (S.page === 'staff')      st.innerHTML = staffLoginV();
+  else if (S.page === 'admin')      st.innerHTML = adminV();
+  else if (S.page === 'assistant')  st.innerHTML = assistantV();
+  else                              st.innerHTML = homeV();
   window.scrollTo(0, 0);
 
   if (S.page === 'form')     formAfter();
   if (S.page === 'track' || S.page === 'evaluate') trackAfter();
   if (S.page === 'detail')   detailAfter();
   if (S.page === 'recover')  recoverAfter();
+  if (S.page === 'staff')     staffAfter();
+  if (S.page === 'admin')     adminAfter();
+  if (S.page === 'assistant') assistantAfter();
 }
 
 /* ============================================================
    6) หน้า HOME
    ============================================================ */
+/* ★ ทุกข้อความในหน้านี้อ่านจากแท็บ UIText ในชีตก่อน (มติ EF-D44)
+     ค่าที่เขียนไว้ใน FALLBACK_UI_TEXT คือ "ค่าตั้งต้น" ที่ต้องตรงกับ Config.gs ทุกตัวอักษร
+     ★ ทุกค่าผ่าน esc() เสมอ — ผู้ดูแลพิมพ์แท็ก HTML ลงชีตแล้วต้องไม่กลายเป็นโค้ดที่รันได้ */
 function homeV() {
   const fy = (CFG && CFG.current_fiscal_year) ? CFG.current_fiscal_year : '';
   return ''
     + '<section class="hero">'
     + '  <div>'
     + (fy ? '<span class="fy-badge">ปีงบประมาณ พ.ศ. ' + esc(fy) + '</span>' : '')
-    + '    <h1>ยื่นคำขอ<em>ออกใบเสร็จรับเงิน</em><br>งบประมาณวิจัยจากแหล่งทุนภายนอก</h1>'
-    + '    <p class="sub">กรอกแบบคำขอออนไลน์ แนบหลักฐานการรับโอนเงิน แล้วติดตามได้ทุกขั้นตอนจนถึงวันรับสำเนาใบเสร็จรับเงิน '
-    + '       — ยืนยันตัวตนด้วยรหัส OTP ทางอีเมล ไม่ต้องสมัครสมาชิก</p>'
+    + '    <h1>' + esc(uiText('HOME_HERO_TITLE_1')) + '<em>' + esc(uiText('HOME_HERO_TITLE_HL')) + '</em>'
+    + '<br>' + esc(uiText('HOME_HERO_TITLE_2')) + '</h1>'
+    + '    <p class="sub">' + esc(uiText('HOME_HERO_SUB')) + '</p>'
     + '    <div class="btns">'
-    + '      <button class="btn primary big" data-page="form">📝 เริ่มยื่นคำขอ</button>'
-    + '      <button class="btn ghost big" data-page="track">🔎 ติดตามสถานะ</button>'
+    + '      <button class="btn primary big" data-page="form">' + esc(uiText('HOME_BTN_FORM')) + '</button>'
+    + '      <button class="btn ghost big" data-page="track">' + esc(uiText('HOME_BTN_TRACK')) + '</button>'
     + '    </div>'
     + '  </div>'
     + '  <div class="panel snap">'
-    + '    <div class="head"><h3>ขั้นตอนการให้บริการ</h3><span>5 ขั้น</span></div>'
+    + '    <div class="head"><h3>' + esc(uiText('HOME_STEPS_TITLE')) + '</h3><span>' + esc(uiText('HOME_STEPS_BADGE')) + '</span></div>'
     + '    <ul class="tl" style="margin-top:6px">'
     + stepListHtml()
     + '    </ul>'
@@ -482,15 +577,15 @@ function homeV() {
     + '</section>'
 
     + '<div class="grid g3">'
-    + card('1 · เตรียมเอกสาร', 'หลักฐานการรับโอนเงินงวดนี้ (รูปภาพหรือ PDF) และหลักฐานการชำระค่าธรรมเนียมการโอนกับงานการคลัง มรย. ถ้ามี')
-    + card('2 · กรอกแบบคำขอ 3 ขั้น', 'ข้อมูลผู้ขอรับบริการ → เลือกบริการ (โครงการใหม่ / งวดถัดไป) → รายละเอียดงบประมาณ')
-    + card('3 · รับรหัสบริการ', 'ระบบส่งรหัสบริการไปที่อีเมลของท่าน ใช้รหัสนี้อ้างอิงและติดตามสถานะได้ตลอด')
+    + card(uiText('HOME_CARD1_TITLE'), uiText('HOME_CARD1_TEXT'))
+    + card(uiText('HOME_CARD2_TITLE'), uiText('HOME_CARD2_TEXT'))
+    + card(uiText('HOME_CARD3_TITLE'), uiText('HOME_CARD3_TEXT'))
     + '</div>'
 
     + '<div class="panel" style="margin-top:16px">'
-    + '  <h3 style="font-size:16px;margin-bottom:8px">ข้อควรทราบก่อนใช้บริการ</h3>'
-    + '  <div class="msg warn">กรุณา "งด" ให้ข้อมูลผู้ขอรับบริการ "แทนผู้อื่น" เนื่องจากจะมีผลต่อการรับเอกสารและข้อความแจ้งเตือนทางอีเมล</div>'
-    + '  <div class="msg info">การขอเบิกงวดถัดไป ระบบจะถามยืนยันเรื่องการล้างหนี้งวดเดิมก่อนเสมอ</div>'
+    + '  <h3 style="font-size:16px;margin-bottom:8px">' + esc(uiText('HOME_NOTICE_TITLE')) + '</h3>'
+    + '  <div class="msg warn">' + esc(uiText('HOME_NOTICE_WARN')) + '</div>'
+    + '  <div class="msg info">' + esc(uiText('HOME_NOTICE_INFO')) + '</div>'
     + '</div>';
 }
 /** การ์ดอธิบายขั้นตอนบนหน้าแรก
@@ -693,7 +788,9 @@ function paintResend() {
 function otpPanelV() {
   const purposeText = (OTP.purpose === PURPOSE_VIEW)
     ? 'เพื่อดูข้อมูลคำขอของท่าน'
-    : 'เพื่อยืนยันว่าอีเมลนี้เป็นของท่านจริงก่อนยื่นคำขอ';
+    : (OTP.purpose === PURPOSE_STAFF)
+      ? 'เพื่อเข้าสู่ระบบสำหรับเจ้าหน้าที่'
+      : 'เพื่อยืนยันว่าอีเมลนี้เป็นของท่านจริงก่อนยื่นคำขอ';
   const expMin = Math.round(((CFG && CFG.otp_expiry_sec) ? Number(CFG.otp_expiry_sec) : 600) / 60);
   return '<div class="panel">'
     + '<h3 style="font-size:16px;margin-bottom:6px">ยืนยันอีเมลด้วยรหัส 6 หลัก</h3>'
@@ -751,13 +848,19 @@ async function verifyOtpNow() {
     const d = await api('verifyOtp', {
       email: OTP.email, otp: code, purpose: OTP.purpose, client_hint: clientHint()
     });
-    saveToken(OTP.purpose === PURPOSE_VIEW ? 'view' : 'submit', d);
+    const kind = (OTP.purpose === PURPOSE_VIEW) ? 'view'
+               : (OTP.purpose === PURPOSE_STAFF) ? 'staff' : 'submit';
+    saveToken(kind, d);
     stopResendTimer();
     const next = OTP.next;
     OTP.on = false;
     if (next === 'form') { FORM.step = 2; render(); }
+    else if (next === 'staff') {
+      // ★ บทบาทมาจากเซิร์ฟเวอร์เท่านั้น หน้าเว็บไม่ตัดสินเอง
+      go(staffRole() === 'admin' ? 'admin' : 'assistant');
+    }
     else { render(); loadTrack(); }
-    toast('ยืนยันอีเมลเรียบร้อยแล้ว');
+    toast(next === 'staff' ? 'เข้าสู่ระบบเรียบร้อยแล้ว' : 'ยืนยันอีเมลเรียบร้อยแล้ว');
   } catch (err) {
     btn.disabled = false; btn.textContent = 'ยืนยันรหัส';
     fieldErr('eOtp', err.msg || 'ยืนยันรหัสไม่สำเร็จ');
@@ -833,6 +936,9 @@ function lookupBoxHtml(lk) {
 
 function onServiceTypeChange(mode) {
   if (mode === 'next') {
+    // ★ ปิดได้จากชีตด้วยคีย์ POPUP_DEBT_ENABLED (มติ EF-D44 ข้อ ③)
+    //   💰 ราคาที่จ่ายถ้าปิด: ผู้ใช้ยื่นงวดถัดไปได้โดยไม่ถูกเตือนเงื่อนไขล้างหนี้ตามระเบียบ
+    if (!uiBool('POPUP_DEBT_ENABLED')) { confirmNextMode(); return; }
     // ★ คงพฤติกรรมเดิมของ 1.5: เด้งถามยืนยันเรื่องล้างหนี้งวดเดิมก่อนเสมอ
     const pct = (CFG && CFG.debt_clearance_percent) ? CFG.debt_clearance_percent : 60;
     openM('<div class="mh"><h3>⚠️ แจ้งเตือนเงื่อนไขการล้างหนี้</h3>'
@@ -1203,6 +1309,10 @@ function validateStep3() {
 function askConfirmSubmit() {
   readStep3();
   if (!validateStep3()) return;
+  // ★ ปิดได้จากชีตด้วยคีย์ POPUP_CONFIRM_SUBMIT_ENABLED (มติ EF-D44 ข้อ ③)
+  //   💰 ราคาที่จ่ายถ้าปิด: ไม่มีจังหวะให้ผู้ใช้ทวนข้อมูล คำขอที่กรอกผิดจะเยอะขึ้น
+  //   ★ การตรวจข้อมูล (validateStep3) ยังเดินเหมือนเดิมทุกกรณี — สวิตช์นี้ปิดแค่ "จอทวน"
+  if (!uiBool('POPUP_CONFIRM_SUBMIT_ENABLED')) { doSubmitRequest(); return; }
   const ins = FORM.inst;
   openM('<div class="mh"><h3>ยืนยันการบันทึกข้อมูล?</h3><button class="mx" onclick="closeM()" aria-label="ปิด">✕</button></div>'
     + '<div class="mb"><p>โปรดตรวจสอบรายละเอียดให้ถูกต้อง</p>'
@@ -1282,11 +1392,14 @@ async function doSubmitRequest() {
   } catch (err) {
     FORM.sending = false;
     if (btn) { btn.disabled = false; btn.textContent = 'ยืนยันและส่งข้อมูล'; }
-    fieldErr('eConfirm', err.msg || 'บันทึกคำขอไม่สำเร็จ');
+    let m = err.msg || 'บันทึกคำขอไม่สำเร็จ';
     // ใบเบิกไฟล์ใช้ได้ครั้งเดียว — ถ้าล้มหลังอัปโหลด ต้องแนบไฟล์ใหม่ก่อนส่งซ้ำ
     if (err.error === 'BAD_INPUT' || err.error === 'NOT_FOUND') {
-      fieldErr('eConfirm', (err.msg || 'บันทึกคำขอไม่สำเร็จ') + ' · หากลองส่งใหม่ กรุณาแนบไฟล์หลักฐานอีกครั้ง');
+      m += ' · หากลองส่งใหม่ กรุณาแนบไฟล์หลักฐานอีกครั้ง';
     }
+    fieldErr('eConfirm', m);
+    // ★ ถ้าปิด popup ทวนข้อมูลไว้ (EF-D44) จะไม่มีช่อง eConfirm ให้แสดง — ต้องมีทางบอกผู้ใช้เสมอ
+    if (!$('eConfirm')) toast(m);
   }
 }
 
@@ -1699,6 +1812,467 @@ async function submitRecover() {
 }
 
 /* ============================================================
+   11.5) ★ เฟส 3 — หน้าเจ้าหน้าที่: เข้าสู่ระบบ · คิวงานผู้ช่วย · แดชบอร์ด
+   ------------------------------------------------------------
+   ⚖️ หลักที่ยึดตลอดทั้งส่วนนี้
+     · หน้าเว็บ "ไม่ตัดสินสิทธิ์เอง" — ปุ่มที่วาดได้มาจาก next_statuses / can_cancel
+       ที่เซิร์ฟเวอร์คำนวณมาให้ (SPEC หมวด 6.1 · เกราะบนจอเป็นแค่ความสะดวก)
+     · token เจ้าหน้าที่ใช้ purpose staff_login คนละใบกับของผู้ขอ (มติ EF-D22)
+     · ทุกตัวเลขบนแดชบอร์ดมาจากเซิร์ฟเวอร์ ไม่บวกเองบนจอ (มติ EF-D52)
+   ============================================================ */
+
+/* ---------- อ่านไฟล์เป็น base64 (ใช้ในแถวคิวงาน) ---------- */
+function readFileB64(file) {
+  return new Promise(function (resolve, reject) {
+    const reader = new FileReader();
+    reader.onload = function () {
+      const raw = String(reader.result || '');
+      const comma = raw.indexOf(',');
+      resolve({ name: file.name, size: file.size, b64: comma >= 0 ? raw.slice(comma + 1) : raw });
+    };
+    reader.onerror = function () { reject(new Error('อ่านไฟล์ไม่สำเร็จ')); };
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ---------- หน้าเข้าสู่ระบบเจ้าหน้าที่ ---------- */
+function staffLoginV() {
+  if (OTP.on && OTP.next === 'staff') return otpPanelV();
+  return '<div class="panel" style="max-width:560px;margin:0 auto">'
+    + '<h2 style="font-size:19px;margin-bottom:6px">🔐 เข้าสู่ระบบสำหรับเจ้าหน้าที่</h2>'
+    + '<p class="help">เฉพาะอีเมลที่อยู่ในทะเบียนเจ้าหน้าที่ของระบบเท่านั้น '
+    + 'ระบบจะส่งรหัสยืนยัน 6 หลักไปที่อีเมลของท่าน — ไม่มีรหัสผ่านถาวรให้จำ</p>'
+    + '<div class="field"><label class="fl" for="stEmail">อีเมลเจ้าหน้าที่ <span class="req">*</span></label>'
+    + '<input type="email" id="stEmail" placeholder="name@yru.ac.th" autocomplete="email"></div>'
+    + '<div class="err-tx" id="eStaff" style="display:none"></div>'
+    + '<button class="btn primary" id="btnStaffOtp" onclick="askStaffOtp()">ขอรหัสเข้าสู่ระบบ</button>'
+    + '<div class="msg info" style="margin-top:16px">ถ้าอีเมลของท่านไม่อยู่ในทะเบียน ระบบจะตอบว่าส่งรหัสแล้วเหมือนกัน '
+    + 'แต่จะไม่มีอีเมลถึงท่านจริง (ออกแบบไว้กันคนไล่เดาว่าใครเป็นเจ้าหน้าที่) — '
+    + 'หากไม่ได้รับรหัส กรุณาติดต่อผู้ดูแลระบบให้เพิ่มอีเมลของท่านในทะเบียน</div>'
+    + '</div>';
+}
+function staffAfter() {
+  if (OTP.on && OTP.next === 'staff') { wireOtp(); return; }
+  const e = $('stEmail'); if (e) e.focus();
+}
+async function askStaffOtp() {
+  clearFieldErr('eStaff');
+  const email = valOf('stEmail');
+  if (!isEmailLike(email)) { fieldErr('eStaff', 'กรุณากรอกอีเมลให้ถูกรูปแบบ'); return; }
+  const btn = $('btnStaffOtp');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>กำลังส่งรหัส...';
+  try {
+    const d = await api('requestOtp', { email: email, purpose: PURPOSE_STAFF, client_hint: clientHint() });
+    startOtp(PURPOSE_STAFF, email, 'staff', d);
+  } catch (err) {
+    btn.disabled = false; btn.textContent = 'ขอรหัสเข้าสู่ระบบ';
+    fieldErr('eStaff', err.msg || 'ขอรหัสไม่สำเร็จ');
+  }
+}
+
+/* ---------- ตัวช่วยวาดแถวงานของเจ้าหน้าที่ ---------- */
+function staffRowHtml(r, opt) {
+  opt = opt || {};
+  const tid = r.transaction_id;
+  const nexts = r.next_statuses || [];
+  const sel = ROWACT[tid] || {};
+  const canAct = nexts.length > 0 || r.can_cancel;
+
+  let ctrl = '';
+  if (canAct && !opt.readonly) {
+    ctrl = '<div class="rowact">'
+      + (nexts.length
+          ? '<select id="st_' + esc(tid) + '" onchange="onRowStatusChange(\'' + esc(tid) + '\')" aria-label="เลือกสถานะถัดไป">'
+            + '<option value="">— เลือกสถานะถัดไป —</option>'
+            + nexts.map(function (n) {
+                return '<option value="' + esc(n.status) + '"' + (sel.to === n.status ? ' selected' : '') + '>'
+                  + esc(n.status) + (n.need_file ? ' (ต้องแนบ ' + esc(n.file_label) + ')' : '') + '</option>';
+              }).join('')
+            + '</select>'
+          : '')
+      + (nexts.length
+          ? '<input type="text" id="cm_' + esc(tid) + '" maxlength="1000" placeholder="หมายเหตุถึงผู้ยื่น (ไม่บังคับ)" value="' + esc(sel.comment || '') + '">'
+            + '<input type="file" id="fl_' + esc(tid) + '" accept="image/jpeg,image/png,application/pdf" '
+            + 'style="display:' + (rowNeedsFile(tid, nexts) ? '' : 'none') + '" aria-label="แนบไฟล์เอกสาร">'
+            + '<button class="btn primary" id="up_' + esc(tid) + '" onclick="doRowUpdate(\'' + esc(tid) + '\')">อัปเดตสถานะ</button>'
+          : '')
+      + (r.can_cancel
+          ? '<button class="btn warn" onclick="openCancelModal(\'' + esc(tid) + '\')">ยกเลิกบริการ</button>'
+          : '')
+      + '<div class="err-tx" id="er_' + esc(tid) + '" style="display:none"></div>'
+      + '</div>';
+  } else if (!canAct) {
+    ctrl = '<div class="help">— ไม่มีขั้นถัดไปให้ดำเนินการ —</div>';
+  }
+
+  const links = []
+    .concat(r.evidence_link   ? ['<a href="' + esc(safeUrl(r.evidence_link)) + '" target="_blank" rel="noopener">หลักฐานรับโอน</a>'] : [])
+    .concat(r.receipt_link    ? ['<a href="' + esc(safeUrl(r.receipt_link)) + '" target="_blank" rel="noopener">สำเนาใบเสร็จ</a>'] : [])
+    .concat(r.return_doc_link ? ['<a href="' + esc(safeUrl(r.return_doc_link)) + '" target="_blank" rel="noopener">หนังสือนำส่ง</a>'] : []);
+
+  return '<div class="stafftask">'
+    + '<div class="st-head">'
+    + '  <b>' + esc(r.service_id) + '</b> <span class="chip c-green">งวดที่ ' + esc(r.installment_no) + '</span> '
+    + badge(r.status)
+    + '  <span style="margin-left:auto;color:var(--ink3);font-size:12.5px">ยื่นเมื่อ ' + esc(fmtDate(r.submitted_at, true)) + '</span>'
+    + '</div>'
+    + '<div class="st-body">'
+    + '  <div><b>' + esc(r.project_title) + '</b></div>'
+    + '  <div class="help">' + esc(r.full_name) + ' · ' + esc(r.email) + ' · ' + esc(r.faculty) + '</div>'
+    + '  <div class="help">ยอดรับโอนงวดนี้ <b>' + fmtMoney(r.amount_received) + '</b> บาท · แหล่งทุน ' + esc(r.funding_source) + '</div>'
+    + (links.length ? '<div class="help">เอกสาร: ' + links.join(' · ') + '</div>' : '')
+    + (r.revision_reason ? '<div class="msg warn">เคยขอให้แก้ไข: ' + esc(r.revision_reason) + '</div>' : '')
+    + '</div>'
+    + ctrl
+    + '</div>';
+}
+/** สถานะที่เลือกอยู่ในแถวนี้ต้องแนบไฟล์ไหม */
+function rowNeedsFile(tid, nexts) {
+  const cur = (ROWACT[tid] || {}).to || '';
+  for (let i = 0; i < nexts.length; i++) if (nexts[i].status === cur) return !!nexts[i].need_file;
+  return false;
+}
+function onRowStatusChange(tid) {
+  ROWACT[tid] = ROWACT[tid] || {};
+  ROWACT[tid].to = valOf('st_' + tid);
+  const fl = $('fl_' + tid);
+  if (!fl) return;
+  const need = rowNeedsFile(tid, currentNextsOf(tid));
+  fl.style.display = need ? '' : 'none';
+  if (!need) fl.value = '';
+}
+/** หา next_statuses ของแถวนั้นจากข้อมูลที่โหลดมาล่าสุด (คิวงานหรือแดชบอร์ด) */
+function currentNextsOf(tid) {
+  const buckets = [];
+  if (QUEUE.data && QUEUE.data.queues) QUEUE.data.queues.forEach(function (q) { buckets.push(q.rows || []); });
+  if (DASH.data && DASH.data.tables) DASH.data.tables.forEach(function (t) { buckets.push(t.rows || []); });
+  for (let i = 0; i < buckets.length; i++) {
+    for (let j = 0; j < buckets[i].length; j++) {
+      if (buckets[i][j].transaction_id === tid) return buckets[i][j].next_statuses || [];
+    }
+  }
+  return [];
+}
+
+/* ---------- กดอัปเดตสถานะ 1 แถว ---------- */
+async function doRowUpdate(tid) {
+  clearFieldErr('er_' + tid);
+  const to = valOf('st_' + tid);
+  if (!to) { fieldErr('er_' + tid, 'กรุณาเลือกสถานะถัดไปก่อน'); return; }
+
+  const nexts = currentNextsOf(tid);
+  const need = rowNeedsFile(tid, nexts);
+  const fl = $('fl_' + tid);
+  const hasFile = !!(fl && fl.files && fl.files.length);
+  if (need && !hasFile) {
+    fieldErr('er_' + tid, 'สถานะนี้ต้องแนบไฟล์เอกสาร (JPG · PNG · PDF) ก่อนจึงจะบันทึกได้');
+    return;
+  }
+
+  const btn = $('up_' + tid);
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span>กำลังบันทึก...'; }
+  try {
+    const body = { token: tokenOf('staff'), transaction_id: tid, to_status: to, comment: valOf('cm_' + tid), client_hint: clientHint() };
+
+    if (need && hasFile) {
+      if (btn) btn.innerHTML = '<span class="spin"></span>กำลังอัปโหลดไฟล์...';
+      const maxMb = (CFG && CFG.max_upload_mb) ? Number(CFG.max_upload_mb) : 10;
+      const f = fl.files[0];
+      if (f.size > maxMb * 1048576) throw { error: 'FILE_TOO_LARGE', msg: 'ไฟล์ใหญ่เกิน ' + maxMb + ' MB (ไฟล์ที่เลือก ' + fmtBytes(f.size) + ')' };
+      const data = await readFileB64(f);
+      const up = await api('uploadAttachment', {
+        token: tokenOf('staff'), file_name: data.name, data_base64: data.b64, client_hint: clientHint()
+      });
+      body.upload_token = up.upload_token;
+      if (btn) btn.innerHTML = '<span class="spin"></span>กำลังบันทึกสถานะ...';
+    }
+
+    const d = await api('updateStatus', body);
+    delete ROWACT[tid];
+    toast((d && d.message) ? d.message : 'อัปเดตสถานะเรียบร้อย');
+    await reloadStaffPage();
+  } catch (err) {
+    if (btn) { btn.disabled = false; btn.textContent = 'อัปเดตสถานะ'; }
+    fieldErr('er_' + tid, (err.msg || 'อัปเดตสถานะไม่สำเร็จ')
+      + (err.error === 'BAD_INPUT' ? ' · หากแนบไฟล์ไปแล้ว กรุณาเลือกไฟล์ใหม่ก่อนกดอีกครั้ง' : ''));
+  }
+}
+
+/* ---------- ยกเลิกบริการ (admin · บังคับเหตุผล) ---------- */
+function openCancelModal(tid) {
+  openM('<div class="mh"><h3>ยกเลิกบริการ</h3><button class="mx" onclick="closeM()" aria-label="ปิด">✕</button></div>'
+    + '<div class="mb">'
+    + '<p>รหัสธุรกรรม <b>' + esc(tid) + '</b> — การยกเลิกเป็นสถานะปลายทาง <b>ย้อนกลับไม่ได้</b></p>'
+    + '<div class="field"><label class="fl" for="cxReason">เหตุผลการยกเลิก <span class="req">*</span></label>'
+    + '<textarea id="cxReason" rows="3" maxlength="1000" placeholder="เหตุผลนี้จะถูกส่งไปให้ผู้ยื่นทางอีเมลและแสดงบนหน้าติดตาม"></textarea></div>'
+    + '<div class="err-tx" id="eCx" style="display:none"></div>'
+    + '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">'
+    + '<button class="btn warn" id="btnCx" onclick="doCancelService(\'' + esc(tid) + '\')">ยืนยันการยกเลิก</button>'
+    + '<button class="btn ghost" onclick="closeM()">ไม่ยกเลิก</button>'
+    + '</div></div>');
+}
+async function doCancelService(tid) {
+  clearFieldErr('eCx');
+  const reason = valOf('cxReason');
+  if (reason.length < 5) { fieldErr('eCx', 'กรุณากรอกเหตุผลอย่างน้อย 5 ตัวอักษร'); return; }
+  const btn = $('btnCx');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>กำลังยกเลิก...';
+  try {
+    const d = await api('cancelService', {
+      token: tokenOf('staff'), transaction_id: tid, reason: reason, client_hint: clientHint()
+    });
+    closeM();
+    toast((d && d.message) ? d.message : 'ยกเลิกบริการเรียบร้อย');
+    await reloadStaffPage();
+  } catch (err) {
+    btn.disabled = false; btn.textContent = 'ยืนยันการยกเลิก';
+    fieldErr('eCx', err.msg || 'ยกเลิกไม่สำเร็จ');
+  }
+}
+/** โหลดหน้าเจ้าหน้าที่ที่กำลังเปิดอยู่ใหม่ (หลังเปลี่ยนแปลงข้อมูล) */
+async function reloadStaffPage() {
+  if (S.page === 'admin') { DASH.data = null; render(); await loadDash(); }
+  else { QUEUE.data = null; render(); await loadQueue(); }
+}
+
+/* ---------- หน้าคิวงานผู้ช่วย ---------- */
+function assistantV() {
+  if (QUEUE.err) return errorCard(QUEUE.err, 'loadQueue()');
+  if (!QUEUE.data) return loadingCard('กำลังโหลดคิวงาน...');
+  const d = QUEUE.data;
+  return '<div class="sec-head"><h2>🧾 คิวงานเจ้าหน้าที่</h2>'
+    + '<button class="btn ghost" onclick="reloadStaffPage()">↻ โหลดใหม่</button></div>'
+    + '<div class="grid g3" style="margin-bottom:14px">'
+    + statCard('รอออกใบเสร็จ', d.counts.pending_receipt)
+    + statCard('รอนำส่งกลับแหล่งทุน', d.counts.pending_return)
+    + statCard('รวมงานค้าง', d.counts.total)
+    + '</div>'
+    + d.queues.map(function (q) {
+        return '<div class="panel" style="margin-bottom:14px">'
+          + '<h3 style="font-size:16px;margin-bottom:4px">' + esc(q.title) + ' (' + q.rows.length + ')</h3>'
+          + '<p class="help">ขั้นถัดไปของคิวนี้คือ "' + esc(q.to_status) + '"</p>'
+          + (q.rows.length
+              ? q.rows.map(function (r) { return staffRowHtml(r); }).join('')
+              : '<div class="msg info">ไม่มีงานค้างในคิวนี้</div>')
+          + '</div>';
+      }).join('');
+}
+function assistantAfter() { if (!QUEUE.data && !QUEUE.err && !QUEUE.loading) loadQueue(); }
+async function loadQueue() {
+  if (QUEUE.loading) return;
+  QUEUE.loading = true; QUEUE.err = '';
+  try {
+    QUEUE.data = await api('assistantQueue', { token: tokenOf('staff') });
+  } catch (err) {
+    QUEUE.err = err.msg || 'โหลดคิวงานไม่สำเร็จ';
+    if (err.error === 'FORBIDDEN' || err.error === 'SESSION_INVALID' || err.error === 'SESSION_EXPIRED') {
+      clearToken('staff'); QUEUE.err = ''; QUEUE.data = null; QUEUE.loading = false; go('staff'); return;
+    }
+  }
+  QUEUE.loading = false;
+  render();
+}
+
+/* ---------- หน้าแดชบอร์ดผู้ดูแล ---------- */
+/** การ์ดตัวเลข 1 ใบ · money=true → แสดงทศนิยม 2 ตำแหน่งแบบเงิน · ปกติ → จำนวนนับเต็ม ๆ
+    ★ เคยพลาดตอนเดินหน้าเว็บจริง: การ์ด "จำนวนคำขอ" ขึ้นเป็น 3.00 เพราะใช้ fmtMoney กับทุกค่า */
+function statCard(label, value, sub, money) {
+  const txt = (typeof value === 'number')
+    ? (money ? fmtMoney(value) : Number(value).toLocaleString('th-TH'))
+    : esc(value);
+  return '<div class="panel stat">'
+    + '<div class="num">' + txt + '</div>'
+    + '<div class="lbl">' + esc(label) + '</div>'
+    + (sub ? '<div class="help">' + esc(sub) + '</div>' : '') + '</div>';
+}
+function adminV() {
+  if (DASH.err) return errorCard(DASH.err, 'loadDash()');
+  if (!DASH.data) return loadingCard('กำลังคำนวณแดชบอร์ด...');
+  const d = DASH.data, c = d.cards;
+  const fyOpts = ['<option value="0">ทุกปีงบประมาณ</option>']
+    .concat((d.filter.fiscal_years || []).map(function (y) {
+      return '<option value="' + y + '"' + (Number(d.filter.fiscal_year) === y ? ' selected' : '') + '>ปีงบ ' + y + '</option>';
+    })).join('');
+
+  return '<div class="sec-head"><h2>📊 แดชบอร์ดผู้ดูแลระบบ</h2>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap">'
+    + '<select id="dashFy" onchange="onDashFyChange()" aria-label="กรองตามปีงบประมาณ">' + fyOpts + '</select>'
+    + '<button class="btn ghost" onclick="reloadStaffPage()">↻ โหลดใหม่</button>'
+    + '<button class="btn ghost" onclick="openExportModal()">⬇️ ส่งออก CSV</button>'
+    + '</div></div>'
+
+    + '<div class="grid g4" style="margin-bottom:6px">'
+    + statCard('จำนวนคำขอ', c.services)
+    + statCard('จำนวนธุรกรรม', c.transactions)
+    + statCard('กำลังดำเนินการ', c.in_progress)
+    + statCard('เสร็จสิ้น', c.done)
+    + '</div>'
+    + '<div class="grid g3" style="margin-bottom:14px">'
+    + statCard('ยกเลิก', c.cancelled)
+    // ★ SPEC 11.2 บังคับให้บอกที่มาของตัวเลขงบรวมบนจอ เพื่อให้ทานกับชีตด้วยมือได้
+    + statCard('งบประมาณรวม (บาท)', c.budget_total,
+        'นับจาก ' + c.unique_projects + ' โครงการไม่ซ้ำ จาก ' + c.total_requests + ' คำขอ', true)
+    + statCard('ยอดรับโอนรวม (บาท)', c.received_total, 'รวมทุกงวดตรง ๆ', true)
+    + '</div>'
+
+    + dashWarnHtml(d.warnings)
+
+    + '<div class="panel" style="margin-bottom:14px">'
+    + '<div class="sec-head" style="margin:0 0 8px"><h3 style="font-size:16px">กราฟสรุป</h3>'
+    + '<div class="segbtns">'
+    + '<button class="btn ' + (DASH.chart === 'count' ? 'primary' : 'ghost') + '" onclick="setDashChart(\'count\')">จำนวนรายการ</button>'
+    + '<button class="btn ' + (DASH.chart === 'amount' ? 'primary' : 'ghost') + '" onclick="setDashChart(\'amount\')">ยอดเงิน</button>'
+    + '</div></div>'
+    + '<div class="grid g2">'
+    + barListHtml('แยกตามสังกัด/คณะ', d.charts.by_faculty)
+    + barListHtml('แยกตามแหล่งงบประมาณ', d.charts.by_funding)
+    + '</div></div>'
+
+    + unitTableHtml(d.budget_by_unit)
+    + evalBoxHtml(d.evaluation)
+
+    + d.tables.map(function (t) {
+        return '<div class="panel" style="margin-bottom:14px">'
+          + '<h3 style="font-size:16px;margin-bottom:8px">' + esc(t.title) + ' (' + t.rows.length + ')</h3>'
+          + (t.rows.length
+              ? t.rows.map(function (r) { return staffRowHtml(r, { readonly: !t.editable }); }).join('')
+              : '<div class="msg info">ไม่มีรายการในกลุ่มนี้</div>')
+          + '</div>';
+      }).join('')
+
+    + '<p class="help">ข้อมูล ณ ' + esc(fmtDate(d.generated_at, true)) + '</p>';
+}
+function adminAfter() { if (!DASH.data && !DASH.err && !DASH.loading) loadDash(); }
+function setDashChart(m) { DASH.chart = m; render(); }
+function onDashFyChange() { DASH.fy = numOf(valOf('dashFy')); DASH.data = null; render(); loadDash(); }
+async function loadDash() {
+  if (DASH.loading) return;
+  DASH.loading = true; DASH.err = '';
+  try {
+    DASH.data = await api('adminDashboard', { token: tokenOf('staff'), fiscal_year: DASH.fy || '' });
+  } catch (err) {
+    DASH.err = err.msg || 'โหลดแดชบอร์ดไม่สำเร็จ';
+    if (err.error === 'FORBIDDEN' || err.error === 'SESSION_INVALID' || err.error === 'SESSION_EXPIRED') {
+      clearToken('staff'); DASH.err = ''; DASH.data = null; DASH.loading = false; go('staff'); return;
+    }
+  }
+  DASH.loading = false;
+  render();
+}
+
+/** กราฟแท่งแนวนอนแบบ CSS ล้วน (ไม่มีไลบรารีภายนอก — หน้าเว็บต้องไม่พึ่ง CDN) */
+function barListHtml(title, rows) {
+  const key = DASH.chart === 'amount' ? 'amount' : 'count';
+  const list = (rows || []).slice().sort(function (a, b) { return b[key] - a[key]; });
+  let max = 0;
+  list.forEach(function (x) { if (x[key] > max) max = x[key]; });
+  return '<div><h4 style="font-size:14px;margin-bottom:8px">' + esc(title) + '</h4>'
+    + (list.length
+        ? list.map(function (x) {
+            const pct = max > 0 ? Math.round((x[key] / max) * 100) : 0;
+            return '<div class="barrow"><div class="barlbl" title="' + esc(x.name) + '">' + esc(x.name) + '</div>'
+              + '<div class="bartrack"><div class="barfill" style="width:' + pct + '%"></div></div>'
+              + '<div class="barval">' + (key === 'amount' ? fmtMoney(x[key]) : Number(x[key]).toLocaleString('th-TH')) + '</div></div>';
+          }).join('')
+        : '<div class="msg info">ยังไม่มีข้อมูล</div>')
+    + '</div>';
+}
+/** ตารางงบแยก 8 หน่วยงาน + ★ ยอดที่กระจายไม่ครบ (กับดักข้อ 19 — ห้ามหายเงียบ) */
+function unitTableHtml(u) {
+  if (!u) return '';
+  return '<div class="panel" style="margin-bottom:14px">'
+    + '<h3 style="font-size:16px;margin-bottom:8px">งบประมาณแยกตามหน่วยงาน</h3>'
+    + '<div class="dl">'
+    + (u.units || []).map(function (x) {
+        return '<dt>' + esc(x.name) + '</dt><dd>' + fmtMoney(x.amount) + ' บาท</dd>';
+      }).join('')
+    + '<dt><b>รวมที่กระจายแล้ว</b></dt><dd><b>' + fmtMoney(u.distributed_total) + ' บาท</b></dd>'
+    + '</div>'
+    + (Math.abs(Number(u.unaccounted) || 0) > 0.005
+        ? '<div class="msg warn" style="margin-top:10px">⚠️ มีงบ <b>' + fmtMoney(u.unaccounted)
+          + ' บาท</b> ที่ยังไม่ได้ระบุว่าอยู่หน่วยงานใด — ยอดนี้<b>ไม่ได้อยู่ในตารางข้างบน</b> '
+          + 'แต่ถูกนับอยู่ในการ์ด "งบประมาณรวม" (ดูรายชื่อโครงการในกล่องคำเตือนด้านบน)</div>'
+        : '')
+    + '</div>';
+}
+function evalBoxHtml(e) {
+  if (!e) return '';
+  return '<div class="panel" style="margin-bottom:14px">'
+    + '<h3 style="font-size:16px;margin-bottom:8px">ผลประเมินความพึงพอใจ</h3>'
+    + '<div class="grid g3">'
+    + statCard('จำนวนผู้ประเมิน', e.responders)
+    + statCard('ค่าเฉลี่ยความรวดเร็ว', e.avg_speed, 'จาก ' + e.count_speed + ' คน (เต็ม 5)')
+    + statCard('ค่าเฉลี่ยระบบ', e.avg_system, 'จาก ' + e.count_system + ' คน (เต็ม 5)')
+    + '</div>'
+    + ((e.comments && e.comments.length)
+        ? '<div style="margin-top:10px"><h4 style="font-size:14px;margin-bottom:6px">ข้อเสนอแนะ ('
+          + e.comments.length + ')</h4>'
+          + e.comments.map(function (c) {
+              return '<div class="msg info"><b>' + esc(c.service_id) + '</b> · ' + esc(c.comment) + '</div>';
+            }).join('') + '</div>'
+        : '<p class="help" style="margin-top:8px">ยังไม่มีข้อเสนอแนะ</p>')
+    + '</div>';
+}
+function dashWarnHtml(list) {
+  if (!list || !list.length) return '';
+  return '<div class="panel" style="margin-bottom:14px">'
+    + '<h3 style="font-size:16px;margin-bottom:8px">⚠️ สิ่งที่ควรตรวจด้วยตา (' + list.length + ')</h3>'
+    + list.map(function (w) { return '<div class="msg warn">' + esc(w.text) + '</div>'; }).join('')
+    + '<p class="help">ระบบ<b>ไม่แก้ข้อมูลให้เอง</b>ทุกกรณี — รายงานให้เห็นแล้วผู้ดูแลเป็นคนตัดสิน (มติ EF-D14 · EF-D46)</p>'
+    + '</div>';
+}
+
+/* ---------- ส่งออก CSV ---------- */
+function openExportModal() {
+  const scopes = [
+    { k: 'all',         t: 'ทั้งหมด' },
+    { k: 'in_progress', t: 'กำลังดำเนินการ' },
+    { k: 'done',        t: 'เสร็จสิ้น' },
+    { k: 'returned',    t: 'นำส่งแหล่งทุนแล้ว' },
+    { k: 'cancelled',   t: 'ยกเลิกบริการ' }
+  ];
+  openM('<div class="mh"><h3>⬇️ ส่งออกข้อมูลเป็นไฟล์ CSV</h3>'
+    + '<button class="mx" onclick="closeM()" aria-label="ปิด">✕</button></div>'
+    + '<div class="mb">'
+    + '<div class="field"><label class="fl" for="exScope">เลือกกลุ่มข้อมูล</label>'
+    + '<select id="exScope">' + scopes.map(function (s) {
+        return '<option value="' + s.k + '">' + esc(s.t) + '</option>';
+      }).join('') + '</select></div>'
+    + '<div class="err-tx" id="eEx" style="display:none"></div>'
+    + '<button class="btn primary" id="btnEx" onclick="doExportCsv()">สร้างไฟล์และดาวน์โหลด</button>'
+    + '<div class="msg info" style="margin-top:14px">ไฟล์เป็น UTF-8 แบบมี BOM — เปิดใน Excel แล้วภาษาไทยไม่เพี้ยน</div>'
+    + '</div>');
+}
+async function doExportCsv() {
+  clearFieldErr('eEx');
+  const btn = $('btnEx');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>กำลังสร้างไฟล์...';
+  try {
+    const d = await api('exportCsv', {
+      token: tokenOf('staff'), scope: valOf('exScope'),
+      fiscal_year: DASH.fy || '', client_hint: clientHint()
+    });
+    downloadBase64(d.base64, d.filename, 'text/csv');
+    closeM();
+    toast('ส่งออก ' + d.rows + ' แถวเรียบร้อย');
+  } catch (err) {
+    btn.disabled = false; btn.textContent = 'สร้างไฟล์และดาวน์โหลด';
+    fieldErr('eEx', err.msg || 'ส่งออกไม่สำเร็จ');
+  }
+}
+/** แปลง base64 กลับเป็นไฟล์แล้วสั่งดาวน์โหลด (ไม่ต้องมี endpoint ไฟล์แยก) */
+function downloadBase64(b64, filename, mime) {
+  const bin = atob(String(b64 || ''));
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  const url = URL.createObjectURL(new Blob([bytes], { type: mime || 'application/octet-stream' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = filename || 'download.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+}
+
+/* ============================================================
    12) กล่องแจ้งปัญหา/ข้อเสนอแนะ (มติ EF-D6)
    ============================================================ */
 function openFeedback() {
@@ -1741,15 +2315,17 @@ async function submitFeedbackNow() {
 /* ============================================================
    13) ประกาศสำคัญตอนเข้าหน้าแรก (คงถ้อยคำเดิมของ 1.5 ทุกตัวอักษร)
    ============================================================ */
+/* ★ ปิดได้จากชีตด้วยคีย์ POPUP_NOTICE_ENABLED (มติ EF-D44 ข้อ ③)
+     💰 ราคาที่จ่ายถ้าปิด: ผู้ใช้จะไม่เห็นคำเตือน "งดกรอกแทนผู้อื่น" ตั้งแต่หน้าแรก */
 function showWelcomeNotice() {
+  if (!uiBool('POPUP_NOTICE_ENABLED')) return;
   let seen = null;
   try { seen = sessionStorage.getItem('ef_notice'); } catch (e) {}
   if (seen === '1') return;
   try { sessionStorage.setItem('ef_notice', '1'); } catch (e) {}
-  openM('<div class="mh"><h3>⚠️ ประกาศสำคัญ</h3></div>'
-    + '<div class="mb"><p>กรุณา "งด" ให้ข้อมูลผู้ขอรับบริการ "แทนผู้อื่น" '
-    + 'เนื่องจากจะมีผลต่อการรับเอกสารและข้อความแจ้งเตือนทางอีเมล</p>'
-    + '<button class="btn primary" onclick="closeM()">รับทราบ</button></div>');
+  openM('<div class="mh"><h3>' + esc(uiText('POPUP_NOTICE_TITLE')) + '</h3></div>'
+    + '<div class="mb"><p>' + esc(uiText('POPUP_NOTICE_BODY')) + '</p>'
+    + '<button class="btn primary" onclick="closeM()">' + esc(uiText('POPUP_NOTICE_BTN')) + '</button></div>');
 }
 
 /* ============================================================
@@ -1765,7 +2341,7 @@ function paintTestBanner() {
   }
 }
 async function loadConfig() {
-  if (API_URL === API_PLACEHOLDER) return;
+  if (API_URL === API_PLACEHOLDER) { showWelcomeNotice(); return; }
   try {
     CFG = await api('config');
     if (CFG && CFG.system_title) document.title = CFG.system_title + ' — ระบบรับคำขอออกใบเสร็จรับเงิน';
@@ -1775,6 +2351,9 @@ async function loadConfig() {
   } catch (err) {
     showBanner('เชื่อมต่อระบบไม่ได้: ' + (err.msg || 'เกิดข้อผิดพลาด') + ' — บางฟังก์ชันจะใช้ไม่ได้จนกว่าจะเชื่อมต่อสำเร็จ', true);
   }
+  // ★ ต้องเรียก "หลัง" config มาถึงเท่านั้น ไม่งั้น popup จะขึ้นข้อความค่าตั้งต้นเสมอ
+  //   แม้ผู้ดูแลจะแก้ข้อความหรือปิดสวิตช์ไว้ในชีตแล้ว (มติ EF-D44)
+  showWelcomeNotice();
 }
 function boot() {
   loadTokens();
@@ -1810,7 +2389,6 @@ function boot() {
   }
 
   renderFromUrl();   // วาดหน้าทันที (หน้าหลักเปิดดูได้แม้หลังบ้านยังไม่พร้อม)
-  loadConfig();      // แล้วค่อยโหลด config มาเติม (async — ไม่บล็อกการแสดงผล)
-  showWelcomeNotice();
+  loadConfig();      // แล้วค่อยโหลด config มาเติม (async) — popup ประกาศเด้งท้ายฟังก์ชันนั้น
 }
 boot();   // index.html โหลด app.js แบบ defer → DOM พร้อมแล้ว เรียกได้เลย
