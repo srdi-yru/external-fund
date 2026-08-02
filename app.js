@@ -32,7 +32,7 @@
    (ห้ามใช้ URL ที่ลงท้ายด้วย /dev — ตัวนั้นใช้ได้เฉพาะตอนที่ท่านล็อกอินบัญชีเจ้าของสคริปต์อยู่)
    ดูขั้นตอนใน README_Phase2_วิธีติดตั้ง.md หมวด 14 (ตาราง "บัญชีจุดที่ต้องกรอกเอง")
 */
-const API_URL = 'https://script.google.com/macros/s/AKfycbydKxpRgWhFxBgxT4Dfk-YMzaM8s_Gi797ylvabLSM-G5yQO57nith6VrCwQKqn9f80-w/exec';
+const API_URL = 'PASTE_WEBAPP_EXEC_URL_HERE';
 
 /* ============================================================
    0) ค่าคงที่ของหน้าเว็บ
@@ -1546,6 +1546,12 @@ function trackCardHtml(it) {
   if (it.receipt_ready && receiptUrl) {
     acts.push('<a class="btn ghost sm" href="' + esc(receiptUrl) + '" target="_blank" rel="noopener">⬇ ดาวน์โหลดใบเสร็จ</a>');
   }
+  // ★ สำเนาหนังสือนำส่งแหล่งทุน — ผู้ยื่นใช้เป็นหลักฐานประกอบการเบิก
+  //   เซิร์ฟเวอร์ส่ง return_doc_link มาเป็นค่าว่างถ้ายังไม่ปลดล็อกเอกสาร
+  const returnDocUrl = safeUrl(it.return_doc_link);
+  if (it.return_doc_ready && returnDocUrl) {
+    acts.push('<a class="btn ghost sm" href="' + esc(returnDocUrl) + '" target="_blank" rel="noopener">⬇ ดาวน์โหลดหนังสือนำส่ง</a>');
+  }
   acts.push('<button class="btn ghost sm" onclick="goDetail(\'' + esc(it.service_id) + '\')">📄 ดูรายละเอียด</button>');
 
   const rev = it.is_revision
@@ -1651,7 +1657,10 @@ function dt(k, v) {
 }
 function txHtml(t) {
   const links = [];
-  [[t.evidence_link, 'หลักฐานการรับโอน'], [t.receipt_link, 'สำเนาใบเสร็จรับเงิน'], [t.pdf_link, 'แบบคำขอ (PDF)']]
+  // ★ receipt_link / return_doc_link เซิร์ฟเวอร์ส่งมาเป็นค่าว่างถ้ายังไม่ปลดล็อกเอกสาร
+  //   (ต้องทำแบบประเมินก่อน) — หน้าเว็บไม่ต้องตัดสินใจเอง แค่วาดเท่าที่ได้มา
+  [[t.evidence_link, 'หลักฐานการรับโอน'], [t.receipt_link, 'สำเนาใบเสร็จรับเงิน'],
+   [t.return_doc_link, 'สำเนาหนังสือนำส่งแหล่งทุน'], [t.pdf_link, 'แบบคำขอ (PDF)']]
     .forEach(function (x) {
       const u = safeUrl(x[0]);
       if (u) links.push('<a href="' + esc(u) + '" target="_blank" rel="noopener">' + esc(x[1]) + '</a>');
