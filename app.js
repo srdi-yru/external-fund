@@ -32,7 +32,7 @@
    (ห้ามใช้ URL ที่ลงท้ายด้วย /dev — ตัวนั้นใช้ได้เฉพาะตอนที่ท่านล็อกอินบัญชีเจ้าของสคริปต์อยู่)
    ดูขั้นตอนใน README_Phase2_วิธีติดตั้ง.md หมวด 14 (ตาราง "บัญชีจุดที่ต้องกรอกเอง")
 */
-const API_URL = 'https://script.google.com/macros/s/AKfycbydKxpRgWhFxBgxT4Dfk-YMzaM8s_Gi797ylvabLSM-G5yQO57nith6VrCwQKqn9f80-w/exec';
+const API_URL = 'PASTE_WEBAPP_EXEC_URL_HERE';
 
 /* ============================================================
    0) ค่าคงที่ของหน้าเว็บ
@@ -245,11 +245,32 @@ function isEmailLike(s) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s || '
 function numOf(v) { const n = Number(String(v == null ? '' : v).replace(/,/g, '').trim()); return isNaN(n) ? 0 : n; }
 
 const TH_MONTH = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+
+/* ★★ อ่านวันที่แบบยืดหยุ่น — เกราะชั้นที่ 2 ของบั๊กวัน/เดือนสลับ (เจอบนจอจริง 3 ส.ค. 2569)
+   หลังบ้านส่ง ISO มาให้เสมอตาม API_CONTRACT หมวด 0 แต่ถ้าวันหนึ่งมีค่า "dd/MM/yyyy HH:mm"
+   หลุดมา (เช่นยังไม่ได้ deploy หลังบ้านรุ่นใหม่) `new Date()` จะตีความแบบอเมริกัน MM/DD
+   → 03/08/2026 กลายเป็น 8 มี.ค. · และถ้าวันที่ > 12 จะกลายเป็น Invalid Date ไปเลย
+   ★ ตัวนี้จับรูปแบบไทยก่อน แล้วค่อยตกไปให้ Date อ่านเอง */
+function parseDateLoose(v) {
+  if (v instanceof Date) return isNaN(v.getTime()) ? null : v;
+  const s = String(v == null ? '' : v).trim();
+  if (!s) return null;
+  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ ,]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+  if (m) {
+    let y = parseInt(m[3], 10);
+    if (y > 2400) y -= 543;                       // เผื่อค่าที่บันทึกเป็น พ.ศ.
+    const d = new Date(y, parseInt(m[2], 10) - 1, parseInt(m[1], 10),
+      m[4] ? parseInt(m[4], 10) : 0, m[5] ? parseInt(m[5], 10) : 0, m[6] ? parseInt(m[6], 10) : 0);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  const d2 = new Date(s);
+  return isNaN(d2.getTime()) ? null : d2;
+}
 /** ISO string → วันที่ไทย (พ.ศ.) — หลังบ้านส่ง ISO มาเสมอ หน้าเว็บแปลงเอง */
 function fmtDate(iso, withTime) {
   if (!iso) return '—';
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return esc(iso);
+  const d = parseDateLoose(iso);
+  if (!d) return esc(iso);
   let s = d.getDate() + ' ' + TH_MONTH[d.getMonth()] + ' ' + (d.getFullYear() + 543);
   if (withTime) s += ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ' น.';
   return s;
