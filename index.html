@@ -25,23 +25,31 @@
 </head>
 <body>
 
-<!-- แถบเตือนระดับหน้า: ยังไม่ตั้ง API_URL / เชื่อมต่อหลังบ้านไม่ได้ -->
-<div id="appBanner" class="app-banner" style="display:none" role="alert"></div>
+<!-- ★ ชุด B (มติ EF-D69): กล่องเดียวที่ค้างบนจอ = แถบเตือน 2 ชั้น + แถบบน
+     เดิม .topbar เป็น sticky ตัวเดียว แถบเตือนจึงเลื่อนหายไปตั้งแต่ 39px แรก
+     ทำให้ข้อความ "เชื่อมต่อระบบไม่ได้" หลุดสายตา แล้วผู้ใช้กรอกฟอร์มจนจบฟรี ๆ
+     🔴 ห้ามใส่ position:sticky กลับเข้า .topbar อีก — sticky ซ้อน sticky แล้วเพี้ยน -->
+<div id="stickyTop">
 
-<!-- แถบเตือน "โหมดทดสอบ" — ขึ้นเองเมื่อ config.test_mode = true (มติ EF-D27) -->
-<div id="testBanner" class="app-banner" style="display:none" role="status"></div>
+  <!-- แถบเตือนระดับหน้า: ยังไม่ตั้ง API_URL / เชื่อมต่อหลังบ้านไม่ได้ -->
+  <div id="appBanner" class="app-banner" style="display:none" role="alert"></div>
 
-<!-- แถบบน: โลโก้จริง + ชื่อระบบ (เติมจาก config) + เมนู (เติมจาก JS) -->
-<header class="topbar" id="topbar">
-  <div class="wrap">
-    <button class="brand" id="brand" data-page="home" aria-label="ไปหน้าหลัก">
-      <img class="logo-img" src="assets/srdi_logo.png" alt="โลโก้ สถาบันวิจัยและพัฒนาชายแดนภาคใต้ มหาวิทยาลัยราชภัฏยะลา">
-      <span class="btxt"><b id="brandTitle">SRDI External Fund</b><span id="brandSub">งบประมาณวิจัยจากแหล่งทุนภายนอก · สวพ.ชต. มรย.</span></span>
-    </button>
-    <div class="spacer"></div>
-    <nav class="tabs" id="tabs" aria-label="เมนูหลัก"></nav>
-  </div>
-</header>
+  <!-- แถบเตือน "โหมดทดสอบ" — ขึ้นเองเมื่อ config.test_mode = true (มติ EF-D27) -->
+  <div id="testBanner" class="app-banner" style="display:none" role="status"></div>
+
+  <!-- แถบบน: โลโก้จริง + ชื่อระบบ (เติมจาก config) + เมนู (เติมจาก JS) -->
+  <header class="topbar" id="topbar">
+    <div class="wrap">
+      <button class="brand" id="brand" data-page="home" aria-label="ไปหน้าหลัก">
+        <img class="logo-img" src="assets/srdi_logo.png" alt="โลโก้ สถาบันวิจัยและพัฒนาชายแดนภาคใต้ มหาวิทยาลัยราชภัฏยะลา">
+        <span class="btxt"><b id="brandTitle">SRDI External Fund</b><span id="brandSub">งบประมาณวิจัยจากแหล่งทุนภายนอก · สวพ.ชต. มรย.</span></span>
+      </button>
+      <div class="spacer"></div>
+      <nav class="tabs" id="tabs" aria-label="เมนูหลัก"></nav>
+    </div>
+  </header>
+
+</div><!-- /#stickyTop -->
 
 <!-- แถบผู้ใช้: บอกสถานะการยืนยันอีเมลของผู้ขอรับบริการ -->
 <div class="userbar" id="userbar"><div class="wrap">

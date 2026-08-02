@@ -32,25 +32,35 @@
    (ห้ามใช้ URL ที่ลงท้ายด้วย /dev — ตัวนั้นใช้ได้เฉพาะตอนที่ท่านล็อกอินบัญชีเจ้าของสคริปต์อยู่)
    ดูขั้นตอนใน README_Phase2_วิธีติดตั้ง.md หมวด 14 (ตาราง "บัญชีจุดที่ต้องกรอกเอง")
 */
-const API_URL = 'https://script.google.com/macros/s/AKfycbydKxpRgWhFxBgxT4Dfk-YMzaM8s_Gi797ylvabLSM-G5yQO57nith6VrCwQKqn9f80-w/exec';
+const API_URL = 'PASTE_WEBAPP_EXEC_URL_HERE';
 
 /* ============================================================
    0) ค่าคงที่ของหน้าเว็บ
    ============================================================ */
 const API_PLACEHOLDER = 'PASTE_WEBAPP_EXEC_URL_HERE';
 const API_TIMEOUT_MS  = 45000;        // ไฟล์แนบทำให้ช้ากว่าปกติ จึงเผื่อไว้ 45 วินาที
-/* ★ เฟส 3 เพิ่ม 3 หน้า: staff (เข้าสู่ระบบเจ้าหน้าที่) · admin (แดชบอร์ด) · assistant (คิวงาน) */
-const PAGES = ['home', 'form', 'track', 'detail', 'evaluate', 'recover', 'staff', 'admin', 'assistant'];
+/* ★ เฟส 3 เพิ่ม 3 หน้า: staff (เข้าสู่ระบบเจ้าหน้าที่) · admin (แดชบอร์ด) · assistant (คิวงาน)
+   ★ ชุด B เพิ่ม 2 หน้าของ admin: staffreg (ทะเบียนเจ้าหน้าที่ · EF-S16) · audit (ร่องรอยการใช้งาน · EF-S17) */
+const PAGES = ['home', 'form', 'track', 'detail', 'evaluate', 'recover',
+               'staff', 'admin', 'assistant', 'staffreg', 'audit'];
 const TABS = [
   { id: 'home',  t: 'หน้าหลัก' },
   { id: 'form',  t: '📝 ยื่นคำขอ', cta: 1 },
   { id: 'track', t: '🔎 ติดตามสถานะ' }
 ];
 /* แท็บที่โผล่เฉพาะตอนเจ้าหน้าที่เข้าสู่ระบบแล้ว (ผู้ใช้ทั่วไปไม่เห็น) */
+/* 🔴 ป้ายของ 2 แท็บใหม่ "สั้นโดยเจตนา" — วัดบนจอจริงแล้วพบว่าใช้ชื่อเต็มทำให้แถบเมนูของ admin
+   ตกเป็น 3 บรรทัด (สูง 118px) และตั้งแต่ EF-D69 แถบนี้ค้างบนจอตลอด = กินพื้นที่ทุกหน้า
+   ป้ายสั้นทำให้กลับมาเหลือบรรทัดเดียว (77px) · ชื่อเต็มยังอยู่ที่ `full` (ทูลทิป) และหัวข้อของหน้า */
 const STAFF_TABS = {
-  admin:     [{ id: 'admin',     t: '📊 แดชบอร์ด' }, { id: 'assistant', t: '🧾 คิวงาน' }],
+  admin:     [{ id: 'admin',     t: '📊 แดชบอร์ด' }, { id: 'assistant', t: '🧾 คิวงาน' },
+              { id: 'staffreg',  t: '👥 เจ้าหน้าที่', full: 'ทะเบียนเจ้าหน้าที่' },
+              { id: 'audit',     t: '📜 ร่องรอย',    full: 'ร่องรอยการใช้งาน' }],
   assistant: [{ id: 'assistant', t: '🧾 คิวงาน' }]
 };
+/* ★ หน้าที่เปิดได้เฉพาะ admin — ใช้ทั้งตอนกันเข้าหน้าและตอนเลือกหน้าปลายทางหลังเข้าสู่ระบบ
+   (เขียนไว้ที่เดียว เพิ่มหน้าใหม่ของ admin แล้วไม่ต้องไล่แก้ router หลายจุด) */
+const ADMIN_ONLY_PAGES = ['admin', 'staffreg', 'audit'];
 
 /* วัตถุประสงค์ของ OTP — ★ 3 ใบนี้ใช้แทนกันไม่ได้ (มติ EF-D22) */
 const PURPOSE_SUBMIT = 'requester_submit';   // ยื่นคำขอ
@@ -155,6 +165,10 @@ let AUTH = { submit: null, view: null, staff: null };  // token 3 ใบ แย�
 /* สถานะของหน้าเจ้าหน้าที่ (เฟส 3) */
 let DASH  = { loading: false, err: '', data: null, chart: 'count', fy: 0 };
 let QUEUE = { loading: false, err: '', data: null };
+/* ★ ชุด B — ทะเบียนเจ้าหน้าที่ (EF-S16) · ร่องรอยการใช้งาน (EF-S17)
+   act/q ของ AUDIT เป็นตัวกรอง "บนจอ" ล้วน กรองจากแถวที่โหลดมาแล้ว ไม่ยิงหลังบ้านซ้ำ */
+let SREG  = { loading: false, err: '', data: null };
+let AUDIT = { loading: false, err: '', data: null, limit: 100, act: '', q: '' };
 let ROWACT = {};   // ค่าที่เจ้าหน้าที่กำลังกรอกในแถว: {tid: {to, comment, file}}
 let FORM = newForm();
 let TRACK = { loading: false, err: '', items: null, only: '' };
@@ -515,9 +529,21 @@ function buildBars() {
   $('tabs').innerHTML =
     tabs.map(function (x) {
       return '<button class="tab ' + (cur === x.id ? 'active' : '') + ' ' + (x.cta ? 'cta' : '') + '"'
-        + ' data-page="' + x.id + '"' + (cur === x.id ? ' aria-current="page"' : '') + '>' + x.t + '</button>';
+        + ' data-page="' + x.id + '"' + (cur === x.id ? ' aria-current="page"' : '')
+        // ★ ชุด B: แท็บที่ใช้ป้ายย่อ บอกชื่อเต็มไว้ให้ทั้งเมาส์ชี้และโปรแกรมอ่านหน้าจอ
+        + (x.full ? ' title="' + esc(x.full) + '" aria-label="' + esc(x.full) + '"' : '')
+        + '>' + x.t + '</button>';
     }).join('')
     + '<button class="tab mode" id="mBtn" data-mode aria-label="สลับโหมดสว่าง/มืด">' + (S.theme === 'light' ? '🌙' : '☀️') + '</button>';
+
+  /* ★ ชุด B: บนจอแคบแถบเมนูเป็นแถบเลื่อนแนวนอน — เลื่อนให้แท็บที่กำลังเปิดอยู่โผล่มาให้เห็นเอง
+     ไม่งั้นผู้ใช้จะไม่รู้ว่าตอนนี้อยู่หน้าไหน เพราะแท็บที่ active หลุดไปนอกจอทางขวา
+     (แตะเฉพาะ scrollLeft ของแถบ ไม่ยุ่งกับตำแหน่งเลื่อนของทั้งหน้า) */
+  const bar = $('tabs');
+  const act = bar.querySelector('.tab.active');
+  if (act && bar.scrollWidth > bar.clientWidth) {
+    bar.scrollLeft = Math.max(0, act.offsetLeft - bar.offsetLeft - 12);
+  }
 
   const who = $('who');
   const t = AUTH.view || AUTH.submit;
@@ -573,9 +599,10 @@ function applyRoute() {
     if (TRACK.only !== want) { TRACK.only = want; TRACK.items = null; TRACK.err = ''; }
   }
   // ★ เฟส 3: ยังไม่เข้าสู่ระบบเจ้าหน้าที่ → เด้งไปหน้าเข้าสู่ระบบ (เกราะบนจอ · ของจริงตรวจที่เซิร์ฟเวอร์)
-  if ((S.page === 'admin' || S.page === 'assistant') && !isStaff()) S.page = 'staff';
-  // ผู้ช่วยเปิดหน้าแดชบอร์ดของ admin ไม่ได้
-  if (S.page === 'admin' && staffRole() !== 'admin') S.page = 'assistant';
+  //   ★ ชุด B: รวมหน้าใหม่ของ admin เข้าเงื่อนไขเดียวกัน
+  if ((S.page === 'assistant' || ADMIN_ONLY_PAGES.indexOf(S.page) >= 0) && !isStaff()) S.page = 'staff';
+  // ผู้ช่วยเปิดหน้าของ admin ไม่ได้ (แดชบอร์ด · ทะเบียนเจ้าหน้าที่ · ร่องรอยการใช้งาน)
+  if (ADMIN_ONLY_PAGES.indexOf(S.page) >= 0 && staffRole() !== 'admin') S.page = 'assistant';
   // เข้าสู่ระบบแล้วยังกดหน้า staff → พาไปหน้างานของบทบาทนั้นเลย
   if (S.page === 'staff' && isStaff()) S.page = (staffRole() === 'admin') ? 'admin' : 'assistant';
 }
@@ -593,6 +620,8 @@ function render() {
   else if (S.page === 'staff')      st.innerHTML = staffLoginV();
   else if (S.page === 'admin')      st.innerHTML = adminV();
   else if (S.page === 'assistant')  st.innerHTML = assistantV();
+  else if (S.page === 'staffreg')   st.innerHTML = staffRegV();
+  else if (S.page === 'audit')      st.innerHTML = auditV();
   else                              st.innerHTML = homeV();
   window.scrollTo(0, 0);
 
@@ -603,6 +632,8 @@ function render() {
   if (S.page === 'staff')     staffAfter();
   if (S.page === 'admin')     adminAfter();
   if (S.page === 'assistant') assistantAfter();
+  if (S.page === 'staffreg')  staffRegAfter();
+  if (S.page === 'audit')     auditAfter();
 }
 
 /* ============================================================
@@ -2000,6 +2031,12 @@ function staffRowHtml(r, opt) {
     + '  <div class="help">ยอดรับโอนงวดนี้ <b>' + fmtMoney(r.amount_received) + '</b> บาท · แหล่งทุน ' + esc(r.funding_source) + '</div>'
     + (links.length ? '<div class="help">เอกสาร: ' + links.join(' · ') + '</div>' : '')
     + (r.revision_reason ? '<div class="msg warn">เคยขอให้แก้ไข: ' + esc(r.revision_reason) + '</div>' : '')
+    // ★ ชุด B (EF-S19): ใบที่ถูกยกเลิกต้องบอกเหตุผล/คนกด/เวลาบนจอ ไม่ต้องไปเปิดชีตหรือไล่ AuditLog
+    + (r.is_cancelled
+        ? '<div class="msg err">ยกเลิกเมื่อ <b>' + esc(fmtDate(r.cancelled_at, true)) + '</b>'
+          + (r.cancelled_by ? ' โดย ' + esc(r.cancelled_by) : '')
+          + '<br>เหตุผล: ' + esc(r.cancel_reason || '(ไม่ได้บันทึกเหตุผลไว้ — ข้อมูลก่อนระบบ 2.0)') + '</div>'
+        : '')
     + '</div>'
     + ctrl
     + '</div>';
@@ -2107,10 +2144,22 @@ async function doCancelService(tid) {
     fieldErr('eCx', err.msg || 'ยกเลิกไม่สำเร็จ');
   }
 }
-/** โหลดหน้าเจ้าหน้าที่ที่กำลังเปิดอยู่ใหม่ (หลังเปลี่ยนแปลงข้อมูล) */
+/** โหลดหน้าเจ้าหน้าที่ที่กำลังเปิดอยู่ใหม่ (หลังเปลี่ยนแปลงข้อมูล)
+ *  🐛 ★★ ชุด B แก้กับดักข้อ 38 ที่ค้างมาตั้งแต่เฟส 3: ของเดิมล้างเฉพาะหน้าที่เปิดอยู่
+ *     → เดินสถานะบนแดชบอร์ดแล้วสลับไปหน้าคิวงาน จะเห็นรายการเก่าค้างอยู่โดยไม่มีอะไรฟ้อง
+ *     (โค้ดถูกทุกบรรทัด ผิดแค่จังหวะล้างของเก่า — แบบเดียวกับบั๊กหน้ารายละเอียดของชุด A)
+ *  ★ กฎที่ยึดจากนี้ไป: 1 การกระทำเปลี่ยนสถานะ = ล้างของเก่า "ทุกหน้า" ที่แสดงรายการนั้น */
+async function invalidateStaffCaches() {
+  DASH.data = null;
+  QUEUE.data = null;
+  AUDIT.data = null;   // ทุกการกระทำของเจ้าหน้าที่ลง AuditLog เสมอ หน้าร่องรอยจึงเก่าทันที
+}
 async function reloadStaffPage() {
-  if (S.page === 'admin') { DASH.data = null; render(); await loadDash(); }
-  else { QUEUE.data = null; render(); await loadQueue(); }
+  await invalidateStaffCaches();
+  if (S.page === 'admin')         { render(); await loadDash(); }
+  else if (S.page === 'staffreg') { SREG.data = null; render(); await loadStaffReg(); }
+  else if (S.page === 'audit')    { render(); await loadAudit(); }
+  else                            { render(); await loadQueue(); }
 }
 
 /* ---------- หน้าคิวงานผู้ช่วย ---------- */
@@ -2348,6 +2397,290 @@ function downloadBase64(b64, filename, mime) {
   a.href = url; a.download = filename || 'download.csv';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+}
+
+/* ============================================================
+   11.6) ★ ชุด B — ทะเบียนเจ้าหน้าที่ (EF-S16) · ร่องรอยการใช้งาน (EF-S17)
+   ------------------------------------------------------------
+   ⚖️ หลักที่ยึดตลอดทั้งส่วนนี้
+     · ทั้ง 2 หน้าเป็นของ admin เท่านั้น — เกราะบนจอเป็นแค่ความสะดวก
+       ของจริงหลังบ้านเรียก requireAuth_(token, [ROLE_ADMIN]) เองทุก request
+     · หน้าเว็บ "ไม่มีรายการบทบาทเป็นของตัวเอง" และ "ไม่ตัดสินว่าใครถอดสิทธิ์ได้"
+       ใช้ roles / can_deactivate / block_reason ที่ listStaff ส่งมาเท่านั้น (มติ EF-D52)
+     · เกราะกันระบบล็อกตัวเอง 2 ชั้นอยู่ที่หลังบ้าน (staffDeactivateBlock_) — หน้าเว็บแค่
+       "เล่าเหตุผลที่หลังบ้านบอกมา" ไม่ได้คิดกฎเอง จึงเพี้ยนจากของจริงไม่ได้
+   ============================================================ */
+
+/* ---------- หน้า "ทะเบียนเจ้าหน้าที่" (EF-S16) ---------- */
+function staffRegV() {
+  if (SREG.err) return errorCard(SREG.err, 'loadStaffReg()');
+  if (!SREG.data) return loadingCard('กำลังโหลดทะเบียนเจ้าหน้าที่...');
+  const d = SREG.data;
+  const rows = d.rows || [];
+  const on  = rows.filter(function (r) { return r.active; });
+  const off = rows.filter(function (r) { return !r.active; });
+  const roleOpts = (d.roles || []).map(function (r) {
+    return '<option value="' + esc(r.value) + '">' + esc(r.label) + '</option>';
+  }).join('');
+
+  return '<div class="sec-head"><h2>👥 ทะเบียนเจ้าหน้าที่</h2>'
+    + '<button class="btn ghost" onclick="reloadStaffPage()">↻ โหลดใหม่</button></div>'
+
+    + '<div class="grid g3" style="margin-bottom:14px">'
+    + statCard('ใช้งานอยู่', on.length)
+    + statCard('ปิดใช้งานแล้ว', off.length)
+    + statCard('ผู้ดูแลระบบที่ใช้งานได้', d.active_admins, 'ระบบต้องเหลืออย่างน้อย 1 บัญชี')
+    + '</div>'
+
+    + '<div class="panel" style="margin-bottom:14px">'
+    + '<h3 style="font-size:16px;margin-bottom:4px">เพิ่มเจ้าหน้าที่</h3>'
+    + '<p class="help">อีเมลที่เคย<b>ปิดใช้งาน</b>ไปแล้ว ใส่ซ้ำได้เลย — ระบบจะเปิดใช้งานกลับให้พร้อมอัปเดตบทบาทตามที่เลือก</p>'
+    + '<div class="frow f3" style="margin-top:10px">'
+    + '<div class="field"><label class="fl" for="sgEmail">อีเมล <span class="req">*</span></label>'
+    + '<input type="email" id="sgEmail" placeholder="name@yru.ac.th" autocomplete="off"></div>'
+    + '<div class="field"><label class="fl" for="sgName">ชื่อ-สกุล <span class="req">*</span></label>'
+    + '<input type="text" id="sgName" maxlength="100" placeholder="นางสาว…"></div>'
+    + '<div class="field"><label class="fl" for="sgRole">บทบาท <span class="req">*</span></label>'
+    + '<select id="sgRole">' + roleOpts + '</select></div>'
+    + '</div>'
+    + '<div class="err-tx" id="eSreg" style="display:none"></div>'
+    + '<button class="btn primary" id="btnSregAdd" onclick="doAddStaff()">เพิ่มเข้าทะเบียน</button>'
+    + '<div class="msg info" style="margin-top:14px">'
+    + '<b>ผู้ดูแลระบบ (admin)</b> เห็นทุกคำขอ เดินได้ทุกสถานะ และเปิดแดชบอร์ด/หน้านี้ได้ · '
+    + '<b>ผู้ช่วย (assistant)</b> เห็นเฉพาะคิวงานของตัวเองและเดินได้ 2 สถานะ</div>'
+    + '</div>'
+
+    + staffRegGroupHtml('ใช้งานอยู่', on, rows, 'ยังไม่มีเจ้าหน้าที่ที่ใช้งานอยู่')
+    + staffRegGroupHtml('ปิดใช้งานแล้ว', off, rows, 'ยังไม่มีใครถูกปิดใช้งาน')
+
+    + '<p class="help">ระบบ<b>ไม่ลบแถวทิ้ง</b>เมื่อปิดใช้งาน เพื่อให้ย้อนดูใน "ร่องรอยการใช้งาน" ได้ว่าใครเคยทำอะไรไว้ · '
+    + 'การปิดใช้งานจะตัดการเข้าสู่ระบบที่ค้างอยู่ของคนนั้นทันที</p>';
+}
+/* ★ ส่ง `all` (รายการเต็มจาก listStaff) เข้ามาด้วย เพื่อหา "ลำดับแถวจริง" ของแต่ละคน
+     ปุ่มจึงอ้างคนด้วยเลขลำดับ ไม่ใช่เอาอีเมลไปฝังใน onclick — อีเมลแปลก ๆ ที่ผู้ดูแล
+     พิมพ์เองในชีตจะทำให้ปุ่มนั้นกดไม่ได้เงียบ ๆ ถ้าฝังเป็นข้อความ */
+function staffRegGroupHtml(title, rows, all, emptyText) {
+  return '<div class="panel" style="margin-bottom:14px">'
+    + '<h3 style="font-size:16px;margin-bottom:8px">' + esc(title) + ' (' + rows.length + ')</h3>'
+    + (rows.length
+        ? rows.map(function (r) { return staffRegRowHtml(r, all.indexOf(r)); }).join('')
+        : '<div class="msg info">' + esc(emptyText) + '</div>')
+    + '</div>';
+}
+function staffRegRowHtml(r, idx) {
+  let act;
+  if (!r.active) {
+    act = '<span class="chip c-amber">ปิดใช้งานแล้ว</span>';
+  } else if (r.can_deactivate) {
+    act = '<button class="btn warn sm" onclick="openDeactivateModal(' + idx + ')">ปิดใช้งาน</button>';
+  } else {
+    // ★ เหตุผลมาจากหลังบ้าน (block_reason) ไม่ได้เขียนขึ้นเองบนจอ — กฎจึงเพี้ยนจากของจริงไม่ได้
+    act = '<span class="help">🔒 ' + esc(r.block_reason) + '</span>';
+  }
+  return '<div class="dtrow dt-reg">'
+    + '<div><b>' + esc(r.name || '(ไม่ได้ระบุชื่อ)') + '</b>'
+    +   (r.is_self ? ' <span class="chip c-green">บัญชีของท่าน</span>' : '')
+    +   '<div class="help">' + esc(r.email) + '</div></div>'
+    + '<div><span class="chip ' + (r.role === 'admin' ? 'c-blue' : 'c-green') + '">'
+    +   esc(r.role_label || r.role) + '</span></div>'
+    + '<div class="help">เพิ่มเมื่อ ' + esc(fmtDate(r.created_at)) + '</div>'
+    + '<div class="dtact">' + act + '</div>'
+    + '</div>';
+}
+function staffRegAfter() { if (!SREG.data && !SREG.err && !SREG.loading) loadStaffReg(); }
+async function loadStaffReg() {
+  if (SREG.loading) return;
+  SREG.loading = true; SREG.err = '';
+  try {
+    SREG.data = await api('listStaff', { token: tokenOf('staff') });
+  } catch (err) {
+    SREG.err = err.msg || 'โหลดทะเบียนเจ้าหน้าที่ไม่สำเร็จ';
+    if (err.error === 'FORBIDDEN' || err.error === 'SESSION_INVALID' || err.error === 'SESSION_EXPIRED') {
+      clearToken('staff'); SREG.err = ''; SREG.data = null; SREG.loading = false; go('staff'); return;
+    }
+  }
+  SREG.loading = false;
+  render();
+}
+async function doAddStaff() {
+  clearFieldErr('eSreg');
+  const email = valOf('sgEmail');
+  const name  = valOf('sgName');
+  const role  = valOf('sgRole');
+  if (!isEmailLike(email)) { fieldErr('eSreg', 'กรุณากรอกอีเมลให้ถูกรูปแบบ'); return; }
+  if (!name)               { fieldErr('eSreg', 'กรุณาระบุชื่อ-สกุลของเจ้าหน้าที่'); return; }
+  if (!role)               { fieldErr('eSreg', 'กรุณาเลือกบทบาท'); return; }
+
+  const btn = $('btnSregAdd');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>กำลังบันทึก...';
+  try {
+    const d = await api('addStaff', {
+      token: tokenOf('staff'), email: email, name: name, role: role, client_hint: clientHint()
+    });
+    toast('เพิ่ม ' + (d && d.email ? d.email : email) + ' เข้าทะเบียนแล้ว');
+    await reloadStaffPage();
+  } catch (err) {
+    btn.disabled = false; btn.textContent = 'เพิ่มเข้าทะเบียน';
+    fieldErr('eSreg', err.msg || 'เพิ่มเจ้าหน้าที่ไม่สำเร็จ');
+  }
+}
+function openDeactivateModal(idx) {
+  const row = ((SREG.data && SREG.data.rows) || [])[idx];
+  if (!row) { toast('ข้อมูลทะเบียนเปลี่ยนไปแล้ว กรุณากดโหลดใหม่'); return; }
+  const email = row.email;
+  openM('<div class="mh"><h3>ปิดใช้งานเจ้าหน้าที่</h3><button class="mx" onclick="closeM()" aria-label="ปิด">✕</button></div>'
+    + '<div class="mb">'
+    + '<p><b>' + esc(row.name || email) + '</b><br><span class="help">' + esc(email) + '</span></p>'
+    + '<div class="msg warn">คนนี้จะเข้าสู่ระบบไม่ได้อีก และการเข้าสู่ระบบที่ค้างอยู่จะถูกตัดทันที · '
+    + 'แถวในทะเบียน<b>ไม่ถูกลบ</b> จึงย้อนดูร่องรอยเดิมได้ และเพิ่มกลับเข้ามาใหม่ได้ทุกเมื่อ</div>'
+    + '<div class="err-tx" id="eDeact" style="display:none"></div>'
+    + '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">'
+    + '<button class="btn warn" id="btnDeact" onclick="doDeactivateStaff(' + idx + ')">ยืนยันปิดใช้งาน</button>'
+    + '<button class="btn ghost" onclick="closeM()">ไม่ปิด</button>'
+    + '</div></div>');
+}
+async function doDeactivateStaff(idx) {
+  clearFieldErr('eDeact');
+  const row = ((SREG.data && SREG.data.rows) || [])[idx];
+  if (!row) { closeM(); toast('ข้อมูลทะเบียนเปลี่ยนไปแล้ว กรุณากดโหลดใหม่'); return; }
+  const email = row.email;
+  const btn = $('btnDeact');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>กำลังปิดใช้งาน...';
+  try {
+    await api('deactivateStaff', { token: tokenOf('staff'), email: email, client_hint: clientHint() });
+    closeM();
+    toast('ปิดใช้งาน ' + email + ' แล้ว');
+    await reloadStaffPage();
+  } catch (err) {
+    btn.disabled = false; btn.textContent = 'ยืนยันปิดใช้งาน';
+    fieldErr('eDeact', err.msg || 'ปิดใช้งานไม่สำเร็จ');
+  }
+}
+
+/* ---------- หน้า "ร่องรอยการใช้งาน" (EF-S17) ---------- */
+/* ★ คำแปลไทยของรหัสเหตุการณ์ — เป็น "คำอธิบายบนจอ" เท่านั้น ไม่ใช่กฎอะไรทั้งสิ้น
+     รหัสที่ยังไม่มีคำแปล (เฟสหลังเพิ่มเข้ามา) จะแสดงรหัสดิบแทน ไม่หายไปและไม่พัง */
+const AUDIT_ACTION_TH = {
+  LOGIN: 'เข้าสู่ระบบ', LOGOUT: 'ออกจากระบบ',
+  OTP_REQUEST_NOT_STAFF: '⚠️ ขอรหัสเข้าระบบด้วยอีเมลนอกทะเบียน',
+  ADD_STAFF: 'เพิ่มเจ้าหน้าที่', REACTIVATE_STAFF: 'เปิดใช้งานเจ้าหน้าที่กลับ',
+  DEACTIVATE_STAFF: 'ปิดใช้งานเจ้าหน้าที่',
+  SUBMIT_FEEDBACK: 'ส่งข้อเสนอแนะ',
+  SUBMIT_REQUEST: 'ยื่นคำขอ', UPLOAD_ATTACHMENT: 'อัปโหลดไฟล์',
+  SUBMIT_EVALUATION: 'ทำแบบประเมิน',
+  RECEIPT_MISSING: '⚠️ ประเมินแล้วแต่ยังไม่มีไฟล์ใบเสร็จ',
+  RECOVER_ID: 'ส่งรายการรหัสบริการทางอีเมล',
+  RECOVER_ID_NOT_FOUND: '⚠️ ขอรายการรหัสด้วยอีเมลที่ไม่มีคำขอ',
+  UPDATE_STATUS: 'เดินสถานะ', CANCEL_SERVICE: 'ยกเลิกบริการ', EXPORT_CSV: 'ส่งออก CSV',
+  BACKUP_CREATE: 'สำรองข้อมูล', BACKUP_PRUNE: 'ลบสำเนาสำรองที่หมดอายุ', BACKUP_FAIL: '⚠️ สำรองข้อมูลไม่สำเร็จ'
+};
+/* เหตุการณ์ที่ควรจับตาเป็นพิเศษ — ต่อยอดตรง ๆ กับ EF-S7 และ EF-S11 ที่ยังไม่ได้ทำ */
+const AUDIT_WATCH = ['OTP_REQUEST_NOT_STAFF', 'RECEIPT_MISSING', 'RECOVER_ID_NOT_FOUND', 'BACKUP_FAIL'];
+
+function auditActionTh(code) { return AUDIT_ACTION_TH[code] || code; }
+
+function auditV() {
+  if (AUDIT.err) return errorCard(AUDIT.err, 'loadAudit()');
+  if (!AUDIT.data) return loadingCard('กำลังโหลดร่องรอยการใช้งาน...');
+  const all = AUDIT.data.rows || [];
+
+  // รายการเหตุการณ์ที่ "มีจริงในข้อมูลชุดนี้" — ไม่ใช่รายการที่หน้าเว็บคิดขึ้นเอง
+  const seen = {};
+  all.forEach(function (r) { if (r.action) seen[r.action] = (seen[r.action] || 0) + 1; });
+  // ★ ลดจำนวนรายการที่ดึงมาแล้วเหตุการณ์ที่กรองอยู่หลุดหายไป → ต้องล้างตัวกรองทิ้ง
+  //   ไม่งั้น dropdown จะโชว์ "ทุกเหตุการณ์" แต่ตารางข้างล่างว่างเปล่าโดยไม่มีใครอธิบาย
+  if (AUDIT.act && !seen[AUDIT.act]) AUDIT.act = '';
+  const actOpts = ['<option value="">— ทุกเหตุการณ์ —</option>']
+    .concat(Object.keys(seen).sort().map(function (a) {
+      return '<option value="' + esc(a) + '"' + (AUDIT.act === a ? ' selected' : '') + '>'
+        + esc(auditActionTh(a)) + ' (' + seen[a] + ')</option>';
+    })).join('');
+
+  const watch = AUDIT_WATCH.filter(function (a) { return seen[a]; })
+    .map(function (a) { return auditActionTh(a) + ' ' + seen[a] + ' ครั้ง'; });
+
+  const limOpts = [100, 200, 500].map(function (n) {
+    return '<option value="' + n + '"' + (AUDIT.limit === n ? ' selected' : '') + '>ล่าสุด ' + n + ' รายการ</option>';
+  }).join('');
+
+  return '<div class="sec-head"><h2>📜 ร่องรอยการใช้งาน</h2>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap">'
+    + '<select id="auLimit" onchange="onAuditLimitChange()" aria-label="จำนวนรายการที่ดึงมา">' + limOpts + '</select>'
+    + '<button class="btn ghost" onclick="reloadStaffPage()">↻ โหลดใหม่</button>'
+    + '</div></div>'
+
+    + (watch.length
+        ? '<div class="msg warn">⚠️ <b>สัญญาณที่ควรจับตาในช่วงนี้</b>: ' + esc(watch.join(' · ')) + '</div>'
+        : '')
+
+    + '<div class="panel" style="margin-bottom:14px">'
+    + '<div class="frow">'
+    + '<div class="field"><label class="fl" for="auAct">กรองตามเหตุการณ์</label>'
+    + '<select id="auAct" onchange="onAuditFilter()">' + actOpts + '</select></div>'
+    + '<div class="field"><label class="fl" for="auQ">ค้นหา (อีเมล · รหัสบริการ · ข้อความ)</label>'
+    + '<input type="text" id="auQ" value="' + esc(AUDIT.q) + '" oninput="onAuditFilter()" placeholder="เช่น SRDI-2569P-001"></div>'
+    + '</div>'
+    + '<div id="auditRows">' + auditRowsHtml() + '</div>'
+    + '</div>'
+
+    + '<p class="help">ตารางนี้เป็นบันทึกแบบ<b>เขียนเพิ่มอย่างเดียว</b> ไม่มีใครแก้หรือลบได้จากหน้าเว็บ · '
+    + 'ช่อง "จาก → เป็น" ใช้กับเหตุการณ์ที่มีการเปลี่ยนค่า เช่น การเดินสถานะ · '
+    + 'ตัวกรอง 2 ช่องข้างบนทำงานกับรายการที่ดึงมาแล้วเท่านั้น ถ้าต้องการย้อนไกลกว่านี้ให้เพิ่มจำนวนรายการที่มุมขวาบน</p>';
+}
+/** วาดเฉพาะรายการ — แยกออกมาเพื่อให้กรองแล้วไม่ต้อง render ทั้งหน้า (ไม่งั้นช่องค้นหาจะเสียโฟกัสทุกตัวอักษร) */
+function auditRowsHtml() {
+  const all = (AUDIT.data && AUDIT.data.rows) || [];
+  const q = String(AUDIT.q || '').trim().toLowerCase();
+  const list = all.filter(function (r) {
+    if (AUDIT.act && r.action !== AUDIT.act) return false;
+    if (!q) return true;
+    return [r.actor_email, r.target_id, r.note, r.from_value, r.to_value, r.action, auditActionTh(r.action)]
+      .join(' ').toLowerCase().indexOf(q) >= 0;
+  });
+  if (!list.length) {
+    return '<div class="msg info">ไม่พบรายการที่ตรงกับตัวกรอง (ดึงมาทั้งหมด ' + all.length + ' รายการ)</div>';
+  }
+  return '<p class="help" style="margin-bottom:8px">แสดง ' + list.length + ' จาก ' + all.length + ' รายการที่ดึงมา</p>'
+    + list.map(function (r) {
+        const isWatch = AUDIT_WATCH.indexOf(r.action) >= 0;
+        return '<div class="dtrow dt-aud' + (isWatch ? ' watch' : '') + '">'
+          + '<div class="help">' + esc(fmtDate(r.timestamp, true)) + '</div>'
+          + '<div><b>' + esc(auditActionTh(r.action)) + '</b>'
+          +   (r.target_id ? ' <span class="chip c-blue">' + esc(r.target_id) + '</span>' : '')
+          +   ((r.from_value || r.to_value)
+                ? '<div class="help">' + esc(r.from_value || '—') + ' → <b>' + esc(r.to_value || '—') + '</b></div>'
+                : '')
+          +   (r.note ? '<div class="help">' + esc(r.note) + '</div>' : '')
+          + '</div>'
+          + '<div class="help">' + esc(r.actor_email || '(ระบบ)')
+          +   (r.role ? '<br><span class="chip c-green">' + esc(r.role) + '</span>' : '') + '</div>'
+          + '</div>';
+      }).join('');
+}
+function paintAuditRows() { const el = $('auditRows'); if (el) el.innerHTML = auditRowsHtml(); }
+function onAuditFilter() {
+  AUDIT.act = valOf('auAct');
+  AUDIT.q   = valOf('auQ');
+  paintAuditRows();          // ★ วาดเฉพาะรายการ ไม่ render ทั้งหน้า — ช่องค้นหาจึงไม่เสียโฟกัส
+}
+function onAuditLimitChange() {
+  AUDIT.limit = numOf(valOf('auLimit')) || 100;
+  AUDIT.data = null; render(); loadAudit();
+}
+function auditAfter() { if (!AUDIT.data && !AUDIT.err && !AUDIT.loading) loadAudit(); }
+async function loadAudit() {
+  if (AUDIT.loading) return;
+  AUDIT.loading = true; AUDIT.err = '';
+  try {
+    AUDIT.data = await api('auditLog', { token: tokenOf('staff'), limit: AUDIT.limit });
+  } catch (err) {
+    AUDIT.err = err.msg || 'โหลดร่องรอยการใช้งานไม่สำเร็จ';
+    if (err.error === 'FORBIDDEN' || err.error === 'SESSION_INVALID' || err.error === 'SESSION_EXPIRED') {
+      clearToken('staff'); AUDIT.err = ''; AUDIT.data = null; AUDIT.loading = false; go('staff'); return;
+    }
+  }
+  AUDIT.loading = false;
+  render();
 }
 
 /* ============================================================

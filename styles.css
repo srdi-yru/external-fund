@@ -32,8 +32,13 @@ a{color:var(--green);text-decoration:none}
 a:hover{text-decoration:underline}
 .wrap{max-width:1120px;margin:0 auto;padding:0 22px}
 
+/* ---- ★ ชุด B (มติ EF-D69): กล่องที่ค้างบนจอ = แถบเตือน 2 ชั้น + แถบบน รวมเป็นก้อนเดียว ----
+   🔴 sticky อยู่ที่กล่องนี้ที่เดียว — ห้ามใส่ position:sticky ให้ .topbar อีก (sticky ซ้อน sticky = เพี้ยน)
+   กล่องนี้ไม่มีพื้นหลัง/ขอบของตัวเอง จึงไม่กินพื้นที่เลยเมื่อไม่มีแถบเตือนขึ้น (แถบเป็น display:none) */
+#stickyTop{position:sticky;top:0;z-index:40}
+
 /* ---- แถบบน (topbar สีอ่อน ครีม) + โลโก้จริง ---- */
-.topbar{background:var(--body-bg);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:40}
+.topbar{background:var(--body-bg);border-bottom:1px solid var(--line)}
 .topbar .wrap{display:flex;align-items:center;gap:14px;padding:13px 22px}
 .brand{display:flex;align-items:center;gap:12px;cursor:pointer;background:none;border:0;padding:0;text-align:left}
 .logo-img{height:46px;width:auto;display:block}
@@ -299,9 +304,46 @@ input[readonly],textarea[readonly]{background:var(--panel2);color:var(--ink2);cu
 .barval{font-family:'Prompt';font-weight:700;color:var(--ink);white-space:nowrap}
 @media(max-width:640px){.barrow{grid-template-columns:1fr auto}.barlbl{grid-column:1/-1}}
 
+/* ==================================================================
+   ★ ชุด B — ทะเบียนเจ้าหน้าที่ (EF-S16) · ร่องรอยการใช้งาน (EF-S17)
+   ใช้ตัวแปรสีของธีมทั้งหมด ไม่ประกาศสีใหม่ (มติ SM-D26)
+   ================================================================== */
+
+/* ---- แถวในตารางรายชื่อ/ร่องรอย (1 แถว = 1 รายการ) ---- */
+.dtrow{display:grid;gap:6px 14px;align-items:center;padding:11px 2px;
+  border-bottom:1px dashed var(--line);font-size:13.5px}
+.dtrow:last-child{border-bottom:none}
+.dtrow .help{font-size:12.5px}
+.dtrow.dt-reg{grid-template-columns:minmax(190px,2.2fr) auto minmax(130px,1fr) auto}
+.dtrow.dt-aud{grid-template-columns:minmax(135px,150px) minmax(230px,1fr) minmax(140px,185px);align-items:start}
+/* เหตุการณ์ที่ควรจับตา (ไล่เดาอีเมล · ประเมินแล้วไม่มีใบเสร็จ · สำรองข้อมูลล้ม) */
+.dtrow.watch{background:var(--ambers);border-radius:10px;padding-left:10px;padding-right:10px;border-bottom-color:transparent}
+.dtact{text-align:right}
+@media(max-width:820px){
+  .dtrow.dt-reg,.dtrow.dt-aud{grid-template-columns:1fr}
+  .dtact{text-align:left}
+}
+
+/* ---- แถวฟอร์ม 3 ช่อง (ใช้ในกล่อง "เพิ่มเจ้าหน้าที่") ---- */
+.frow.f3{grid-template-columns:1fr 1fr 1fr}
+@media(max-width:760px){.frow.f3{grid-template-columns:1fr}}
+
+/* ---- ★ แถบเมนูบนจอแคบ: เลื่อนแนวนอนบรรทัดเดียว แทนการตกบรรทัดเรื่อย ๆ ----
+   🔴 ที่มา: วัดบนจอ 375px จริงหลังทำ EF-D69 (หัวเว็บค้างบนจอตลอด ความสูงจึงเป็นราคาที่จ่ายทุกหน้า)
+      ผู้ใช้ทั่วไป 4 ปุ่ม → ตก 4 บรรทัด สูง 198px = 24% ของจอ  (มีมาก่อนชุด B แล้ว)
+      admin หลังชุด B 8 ปุ่ม → สูง 360px = 44% ของจอ           (ชุด B ทำให้แย่ลง จึงต้องแก้)
+   เปลี่ยนเป็นแถบเลื่อนแนวนอน: หัวเว็บเหลือ ~110px ทั้งสองกรณี
+   ★ ไม่แตะสี ฟอนต์ หรือถ้อยคำใด ๆ — เปลี่ยนเฉพาะการจัดวางบนจอแคบ (ไม่ขัด EF-D5 · SM-D26) */
+@media(max-width:820px){
+  .topbar .wrap{flex-wrap:wrap;row-gap:8px}
+  .topbar .spacer{display:none}
+  .tabs{flex-wrap:nowrap;overflow-x:auto;width:100%;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+  .tabs .tab{flex:0 0 auto}
+}
+
 /* ---- ★ โหมดพิมพ์ "แบบคำขอ" (SPEC หมวด 9.5 — ซ่อน navbar ตอนพิมพ์) ---- */
 @media print{
-  .topbar,.userbar,.foot,.app-banner,.overlay,.toast,.noprint,.btn{display:none!important}
+  #stickyTop,.topbar,.userbar,.foot,.app-banner,.overlay,.toast,.noprint,.btn{display:none!important}
   body{background:#fff;color:#000;font-size:12pt}
   main{padding:0}
   .wrap{max-width:none;padding:0}
