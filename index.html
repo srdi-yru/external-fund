@@ -54,7 +54,14 @@
 <!-- แถบผู้ใช้: บอกสถานะการยืนยันอีเมลของผู้ขอรับบริการ -->
 <div class="userbar" id="userbar"><div class="wrap">
   <div class="who" id="who"></div>
-  <button class="linkbtn" id="feedbackLink" data-act="feedback">💬 แจ้งปัญหา/ข้อเสนอแนะ</button>
+  <!-- ★ มติ EF-D78: ของฝั่งขวารวมเป็นกลุ่มเดียว เพราะ .userbar .wrap เป็น space-between
+       ถ้าปล่อยเป็น 3 ลูกตรง ๆ ปุ่มกลางจะไปกองกลางแถว · ใช้ inline flex แบบเดียวกับที่ไฟล์นี้ใช้อยู่
+       จึง **ไม่ต้องแก้ styles.css เลย** -->
+  <div style="display:flex;align-items:center;gap:10px">
+    <!-- ปุ่มสลับโหมดสว่าง/มืด — ย้ายมาจากแถวแท็บ (เดิมทำให้แถบเมนูของ admin ตก 2 บรรทัด) -->
+    <span id="modeSlot"></span>
+    <button class="linkbtn" id="feedbackLink" data-act="feedback">💬 แจ้งปัญหา/ข้อเสนอแนะ</button>
+  </div>
 </div></div>
 
 <!-- เนื้อหาหลัก (JS render ตามหน้า) -->
