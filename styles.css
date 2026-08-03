@@ -54,7 +54,15 @@ a:hover{text-decoration:underline}
    ★ gap 3px → 2px เพื่อให้ชุดแท็บวันนี้ "ไม่ล้นเลย" จะได้ไม่มีแถบเลื่อนโผล่มาให้เห็น
    ★ ไม่แตะสี ฟอนต์ หรือถ้อยคำใด ๆ — เปลี่ยนเฉพาะการจัดวาง (ไม่ขัด EF-D5 · SM-D26) */
 .tabs{display:flex;align-items:center;gap:2px;background:var(--tabs-bg);padding:5px;border-radius:14px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
-.tab{border:0;background:transparent;color:var(--tab-tx);font-family:'Prompt';font-weight:600;font-size:13px;padding:9px 14px;border-radius:10px;cursor:pointer;transition:.15s}
+/* ★ EF-D78 ข้อ ⑤: ป้ายแท็บ "ห้ามแตกบรรทัดในตัวปุ่ม"
+   🔴 ที่มา: วัดบนเว็บจริงหลัง deploy พบว่าแถวแท็บเป็นบรรทัดเดียวแล้วจริง แต่ทุกปุ่มสูง 56px
+      เพราะ flex บีบปุ่มให้แคบกว่าข้อความ → ภาษาไทยแตกกลางคำ ("แดช/บอร์ด" · "เจ้า/หน้าที่")
+      ★ ตัวเลขที่วัดจากไฟล์ในเครื่องไม่เห็นอาการนี้ เพราะ loadConfig() ยิงไม่ได้ ชื่อรองจึงสั้นกว่าของจริง
+        (ของจริงดึงจากชีต ยาวกว่า → บล็อกโลโก้กว้าง 383px แถวแท็บจึงเหลือที่แค่ 665px)
+   ★ nowrap ทำให้ min-content = max-content ปุ่มจึงถูกบีบให้แคบกว่าข้อความไม่ได้อีก
+      วัดแล้ว: ปุ่มสูง 56px → 37px ทุกปุ่ม · หัวเว็บ 93px → 84px (7.8% ของจอ 1080px)
+   ★ ไม่แตะสี ฟอนต์ หรือถ้อยคำ (ไม่ขัด EF-D5 · SM-D26) */
+.tab{border:0;background:transparent;color:var(--tab-tx);font-family:'Prompt';font-weight:600;font-size:13px;padding:9px 14px;border-radius:10px;cursor:pointer;transition:.15s;white-space:nowrap}
 .tab:hover{color:var(--ink)}
 .tab.active{background:var(--tab-active-bg);color:var(--tab-active-tx);box-shadow:0 4px 14px rgba(0,0,0,.15)}
 .tab.cta{background:linear-gradient(135deg,#2e9e6b,#1d7a4f);color:#fff;box-shadow:0 4px 14px rgba(29,122,79,.32)}
