@@ -32,7 +32,7 @@
    (ห้ามใช้ URL ที่ลงท้ายด้วย /dev — ตัวนั้นใช้ได้เฉพาะตอนที่ท่านล็อกอินบัญชีเจ้าของสคริปต์อยู่)
    ดูขั้นตอนใน README_Phase2_วิธีติดตั้ง.md หมวด 14 (ตาราง "บัญชีจุดที่ต้องกรอกเอง")
 */
-const API_URL = 'https://script.google.com/macros/s/AKfycbydKxpRgWhFxBgxT4Dfk-YMzaM8s_Gi797ylvabLSM-G5yQO57nith6VrCwQKqn9f80-w/exec';
+const API_URL = 'PASTE_WEBAPP_EXEC_URL_HERE';
 
 /* ============================================================
    0) ค่าคงที่ของหน้าเว็บ
@@ -755,11 +755,49 @@ function draftHasContent(d) {
   return false;
 }
 function saveDraft() {
+  /* ★ EF-D82: ถึงจุดนี้แปลว่าผู้ใช้ "ลงมือทำอะไรบางอย่างแล้ว" (กดเปลี่ยนขั้น · กู้ร่าง · พิมพ์ต่อ)
+     → ข้อเสนอกู้ร่างเดิมหมดอายุทันที · 🔴 ถ้าไม่ล้างตรงนี้ ตัวจดร่างอัตโนมัติจะถูกบล็อกไปตลอด session
+        เพราะ scheduleDraftSave() มีเงื่อนไข "ยังมีข้อเสนอค้าง = ห้ามทับ" */
+  DRAFT.offer = null;
   try {
     const d = draftPack();
     if (!draftHasContent(d)) { clearDraft(); return; }
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify(d));
   } catch (e) {}   // โควตาเต็ม/โหมดส่วนตัว = จำร่างไม่ได้ แต่ห้ามทำให้ฟอร์มพัง
+}
+
+/* ★★ EF-D82 (5 ส.ค. 2569) — จดร่าง "ตอนผู้ใช้พิมพ์" ด้วย ไม่ใช่แค่ตอนเปลี่ยนขั้น
+   ------------------------------------------------------------
+   🔴 บั๊กที่คุณสุ่ยเจอบนของจริงหลังติดตั้งชุด E รอบแรก:
+      กดกู้ร่างแล้ว "ข้อมูลไม่กลับมา" · ไล่ตามแล้วพบว่าร่างจดไว้แค่ข้อมูลขั้นที่ 1
+      เพราะรุ่นแรกจดร่างเฉพาะตอนเปลี่ยนขั้น (gotoStep / submitStep1 / askConfirmSubmit)
+      แต่ **ขั้นที่ 3 เป็นขั้นสุดท้าย ไม่มีการเปลี่ยนขั้นอีก** → ตอนกด "ถัดไป" จากขั้นที่ 2
+      ช่องของขั้นที่ 3 ยังว่างทั้งหมด ระบบจึงจด "ความว่างเปล่า" ไว้
+      แล้วทุกตัวอักษรที่พิมพ์หลังจากนั้นไม่ถูกจดเลย
+   ★ นี่คือฉากที่ EF-S13 ตั้งใจแก้พอดี (รีเฟรชพลาดกลางขั้นที่ 3) — รุ่นแรกจึงยังไม่ตอบโจทย์จริง
+   ★ บทเรียน: ฉากทดสอบเดิมสั่งย้อนขั้นแล้วกลับมา ซึ่งบังเอิญกระตุ้นให้จดร่าง
+      = **ทดสอบด้วยเส้นทางที่ผู้ใช้จริงไม่เดิน** (ตระกูลกับดักข้อ 45)
+   ------------------------------------------------------------
+   กติกาของตัวจับนี้ (ทุกข้อมีเหตุผล อย่าถอดออก)
+     · หน่วงไว้ 600 มิลลิวินาทีหลังหยุดพิมพ์ — ไม่เขียนทุกตัวอักษร
+     · ทำงานเฉพาะหน้าฟอร์มและเฉพาะขั้น 1/2/3 → **ขั้น otp จึงไม่ถูกแตะ = ไม่มีทางจดรหัส OTP ลงร่าง**
+     · 🔴 ถ้ายังมีการ์ดกู้ร่างค้างอยู่ (ผู้ใช้ยังไม่ตัดสินใจ) **ห้ามจดทับ**
+       ไม่งั้นผู้ใช้เผลอพิมพ์ 1 ตัวอักษรแล้วร่างเดิมที่กรอกมาทั้งหมดถูกทับหายทันที
+     · ไม่เรียก render() เด็ดขาด — ไม่งั้นช่องที่กำลังพิมพ์จะเสียโฟกัสทุกตัวอักษร (บทเรียนชุด B) */
+let draftTimer = null;
+function scheduleDraftSave() {
+  if (S.page !== 'form') return;
+  if (FORM.step !== 1 && FORM.step !== 2 && FORM.step !== 3) return;
+  if (DRAFT.offer) return;                    // 🔴 ยังไม่ตัดสินใจเรื่องร่างเดิม = ห้ามทับ
+  if (draftTimer) clearTimeout(draftTimer);
+  draftTimer = setTimeout(function () {
+    draftTimer = null;
+    if (S.page !== 'form' || DRAFT.offer) return;
+    if (FORM.step === 1) readStep1();
+    else if (FORM.step === 2) { if ($('serviceIdSearch')) FORM.serviceIdSearch = valOf('serviceIdSearch').toUpperCase(); }
+    else if (FORM.step === 3) readStep3();
+    saveDraft();
+  }, 600);
 }
 function clearDraft() { try { sessionStorage.removeItem(DRAFT_KEY); } catch (e) {} }
 function readDraft() {
@@ -3111,6 +3149,17 @@ function boot() {
     }
     const mode = e.target.closest('[data-mode]');
     if (mode) { toggleTheme(); return; }
+  });
+
+  /* ★ EF-D82: จดร่างตอนผู้ใช้พิมพ์/เลือกค่าในฟอร์ม (ไม่ใช่แค่ตอนเปลี่ยนขั้น)
+     ใช้ตัวจับที่ระดับ document แบบ capture เพราะเนื้อหาในหน้าถูกวาดใหม่ทุกครั้งที่ render()
+     ถ้าไปผูกกับช่องทีละช่อง จะหลุดทันทีที่หน้าถูกวาดใหม่ */
+  ['input', 'change'].forEach(function (ev) {
+    document.addEventListener(ev, function (e) {
+      if (!e.target || typeof e.target.closest !== 'function') return;
+      if (!e.target.closest('#stage')) return;      // นอกเนื้อหาหลัก (เช่น กล่องโต้ตอบ) ไม่เกี่ยว
+      scheduleDraftSave();
+    }, true);
   });
 
   window.addEventListener('popstate', renderFromUrl);
