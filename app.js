@@ -32,7 +32,7 @@
    (ห้ามใช้ URL ที่ลงท้ายด้วย /dev — ตัวนั้นใช้ได้เฉพาะตอนที่ท่านล็อกอินบัญชีเจ้าของสคริปต์อยู่)
    ดูขั้นตอนใน README_Phase2_วิธีติดตั้ง.md หมวด 14 (ตาราง "บัญชีจุดที่ต้องกรอกเอง")
 */
-const API_URL = 'https://script.google.com/macros/s/AKfycbydKxpRgWhFxBgxT4Dfk-YMzaM8s_Gi797ylvabLSM-G5yQO57nith6VrCwQKqn9f80-w/exec';
+const API_URL = 'PASTE_WEBAPP_EXEC_URL_HERE';
 
 /* ============================================================
    0) ค่าคงที่ของหน้าเว็บ
@@ -176,6 +176,8 @@ let DETAIL = { loading: false, err: '', data: null };
 let OTP  = { on: false, purpose: '', email: '', next: '', err: '', sending: false, left: 0 };
 let otpTimer = null;
 let EVAL = { tid: '', sid: '', speed: 0, system: 0 };
+/* ★ EF-S13 (ชุด E) — ร่างฟอร์มที่เจอค้างไว้ตอนเปิดหน้า · null = ไม่มีร่างให้เสนอ */
+let DRAFT = { offer: null };
 
 function newForm() {
   return {
@@ -491,6 +493,8 @@ function isStaff()   { return staffRole() === 'admin' || staffRole() === 'assist
 async function doSignOut() {
   const tks = [tokenOf('submit'), tokenOf('view'), tokenOf('staff')].filter(Boolean);
   clearToken('submit'); clearToken('view'); clearToken('staff');
+  // ★ EF-S13 (มติ EF-D80): ร่างมีชื่อ-สกุล อีเมล เบอร์โทร — ออกจากการยืนยันแล้วต้องไม่เหลือค้างในเครื่อง
+  clearDraft(); DRAFT = { offer: null };
   FORM = newForm(); TRACK = { loading: false, err: '', items: null, only: '' }; DETAIL = { loading: false, err: '', data: null };
   DASH = { loading: false, err: '', data: null, chart: 'count', fy: 0 };
   QUEUE = { loading: false, err: '', data: null };
@@ -704,6 +708,133 @@ function stepListHtml() {
 /* ============================================================
    7) หน้า FORM — ฟอร์มยื่นคำขอ 3 ขั้น (SPEC หมวด 9)
    ============================================================ */
+
+/* ============================================================
+   ★★ EF-S13 (ชุด E) — จำร่างฟอร์มไว้กันกรอกใหม่ (มติ EF-D80)
+   ------------------------------------------------------------
+   ปัญหาจริง: รีเฟรชพลาดหรือกดย้อนกลับกลางขั้นที่ 3 → ข้อมูลที่กรอกมาทั้งหมดหายเกลี้ยง
+   ต้องเริ่มจากขั้นที่ 1 ใหม่ รวมถึงต้องขอรหัส OTP ใหม่ด้วย
+
+   กติกาที่ยึด (มติ EF-D80)
+     · เก็บใน sessionStorage ที่เดียวกับ token (มติ EF-D42) — ร่างมีชื่อ-สกุล อีเมล เบอร์โทร
+       = ข้อมูลส่วนบุคคล ปิดแท็บแล้วต้องหายไปพร้อมกัน · 🔴 ห้ามใช้ localStorage เด็ดขาด
+     · 🔴 ห้ามเก็บไฟล์แนบ — ใหญ่เกินโควตาที่เก็บได้ และใบเบิกไฟล์หมดอายุ 6 ชม. อยู่แล้ว (EF-D35)
+       → การ์ดกู้ร่างต้องบอกตรง ๆ ว่าต้องแนบไฟล์ใหม่ ไม่ใช่ปล่อยให้ผู้ใช้ไปเจอเอาตอนกดส่ง
+     · เสนอกู้ร่างเป็น "การ์ดบนหน้าฟอร์ม" ไม่ใช่ popup — popup ประกาศ (showWelcomeNotice)
+       เด้งหลัง loadConfig() เสร็จ ถ้าใช้ popup ทั้งคู่ กล่องหลังจะทับกล่องแรกหายเงียบ
+   ------------------------------------------------------------
+   ★ 2 อย่างที่จงใจ "ไม่เก็บ" นอกจากไฟล์แนบ
+     ① ผลค้นหาโครงการเดิม (FORM.lookup) — เป็นข้อมูลจากเซิร์ฟเวอร์ที่อาจเก่าไปแล้ว
+        → โหมด "งวดถัดไป" จึงกู้กลับได้ไกลสุดแค่ขั้นที่ 2 ต้องกดค้นหาใหม่ให้เซิร์ฟเวอร์ยืนยันอีกครั้ง
+     ② สิทธิ์ที่ยืนยันอีเมลไว้ (token) — ถ้าตอนกู้ร่างไม่มี token ของอีเมลนั้นแล้ว
+        จะพากลับไปขั้นที่ 1 (ข้อมูลยังอยู่ครบ) แทนที่จะโยนผู้ใช้ไปเจอ SESSION_INVALID ตอนกดส่ง
+   ============================================================ */
+const DRAFT_KEY = 'ef_form_draft';
+
+/** ประกอบร่างจากสถานะปัจจุบัน — ★ ฟังก์ชันนี้คือจุดเดียวที่ตัดสินว่า "อะไรถูกเก็บบ้าง" */
+function draftPack() {
+  const step = (FORM.step === 1 || FORM.step === 2 || FORM.step === 3) ? FORM.step : 1;
+  return {
+    v: 1,
+    at: new Date().toISOString(),
+    step: step,
+    mode: FORM.mode === 'next' ? 'next' : 'new',
+    serviceIdSearch: String(FORM.serviceIdSearch || ''),
+    f: Object.assign({}, FORM.f),
+    p: Object.assign({}, FORM.p, { dist: Object.assign({}, FORM.p.dist) }),
+    inst: Object.assign({}, FORM.inst)
+    // ★ ไม่มี file · ไม่มี result · ไม่มี lookup · ไม่มี token — โดยเจตนา (EF-D80)
+  };
+}
+/** ร่างนี้มีอะไรให้กู้จริงไหม — ร่างเปล่าไม่ควรไปรบกวนผู้ใช้ด้วยการ์ด */
+function draftHasContent(d) {
+  if (!d || !d.f) return false;
+  const v = [d.f.fullName, d.f.email, d.f.phone,
+             (d.p || {}).projectTitle, (d.inst || {}).amountReceived, (d.inst || {}).receiptOrg];
+  for (let i = 0; i < v.length; i++) { if (String(v[i] || '').trim() !== '') return true; }
+  return false;
+}
+function saveDraft() {
+  try {
+    const d = draftPack();
+    if (!draftHasContent(d)) { clearDraft(); return; }
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify(d));
+  } catch (e) {}   // โควตาเต็ม/โหมดส่วนตัว = จำร่างไม่ได้ แต่ห้ามทำให้ฟอร์มพัง
+}
+function clearDraft() { try { sessionStorage.removeItem(DRAFT_KEY); } catch (e) {} }
+function readDraft() {
+  let d = null;
+  try {
+    const raw = sessionStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    d = JSON.parse(raw);
+  } catch (e) { return null; }
+  if (!d || d.v !== 1 || !d.f) return null;
+  // 🔴 เกราะ: ร่างที่มีไฟล์ปนมาแปลว่าไม่ได้ออกจาก draftPack() ของเรา — ทิ้งทั้งใบ
+  if (d.file || d.b64) { clearDraft(); return null; }
+  return draftHasContent(d) ? d : null;
+}
+/** ขั้นที่กู้กลับได้จริง — เข้มไว้ก่อน ถอยไปขั้นที่ 1 ดีกว่าพาไปยืนที่ขั้นที่เดินต่อไม่ได้ */
+function draftSafeStep(d) {
+  let step = Number(d && d.step);
+  if (step !== 2 && step !== 3) step = 1;
+  if (d.mode === 'next' && step === 3) step = 2;      // ต้องกดค้นหาข้อมูลเดิมใหม่ (ไม่ได้เก็บ lookup)
+  const mail = String((d.f && d.f.email) || '').trim().toLowerCase();
+  if (!AUTH.submit || String(AUTH.submit.email || '').toLowerCase() !== mail) step = 1;
+  return step;
+}
+function draftApply(d) {
+  const f = newForm();
+  const s = d.f || {};
+  ['fullName', 'staffType', 'researcherProject', 'faculty', 'subUnit', 'phone', 'email']
+    .forEach(function (k) { f.f[k] = String(s[k] || ''); });
+  const p = d.p || {};
+  ['fiscalYear', 'projectTitle', 'fundingSource', 'otherFundingSource', 'totalBudget', 'periodStart', 'periodEnd']
+    .forEach(function (k) { f.p[k] = String(p[k] || ''); });
+  const dist = p.dist || {};
+  Object.keys(dist).forEach(function (k) { f.p.dist[k] = numOf(dist[k]); });
+  const ins = d.inst || {};
+  ['installmentNo', 'amountReceived', 'receiptOrg', 'receiptDetail']
+    .forEach(function (k) { if (String(ins[k] || '') !== '') f.inst[k] = String(ins[k]); });
+  f.mode = (d.mode === 'next') ? 'next' : 'new';
+  f.serviceIdSearch = String(d.serviceIdSearch || '');
+  f.step = draftSafeStep(d);
+  return f;
+}
+function draftCardHtml() {
+  const d = DRAFT.offer;
+  if (!d) return '';
+  /* ★ ขึ้นเฉพาะขั้นที่ 1 เท่านั้น — จงใจ
+     ถ้าปล่อยให้ขึ้นทุกขั้น ผู้ใช้ที่ "ไม่กู้ร่าง" แล้วกรอกใหม่จนถึงขั้นที่ 3 จะยังเห็นปุ่มกู้ร่างค้างอยู่
+     กดทีเดียวของที่เพิ่งกรอกหายทั้งหมด · ขั้นที่ 1 คือจุดเดียวที่ยังไม่มีอะไรให้เสียหาย */
+  if (FORM.step !== 1) return '';
+  const who = String((d.f && (d.f.fullName || d.f.email)) || '');
+  return '<div class="panel" style="margin-bottom:14px">'
+    + '<div class="msg warn" style="margin:0 0 12px">🗂️ พบร่างที่กรอกค้างไว้เมื่อ ' + esc(fmtDate(d.at, true))
+    + (who ? ' โดย ' + esc(who) : '')
+    + ' — ระบบไม่ได้เก็บไฟล์แนบไว้ หากกู้ร่างเดิมต้องแนบไฟล์หลักฐานใหม่อีกครั้ง</div>'
+    + '<div class="btns">'
+    + '  <button class="btn primary" type="button" onclick="restoreDraft()">กู้ร่างเดิม</button>'
+    + '  <button class="btn ghost" type="button" onclick="dismissDraft()">เริ่มกรอกใหม่</button>'
+    + '</div></div>';
+}
+function restoreDraft() {
+  const d = DRAFT.offer;
+  if (!d) return;
+  FORM = draftApply(d);
+  DRAFT.offer = null;
+  saveDraft();
+  if (S.page !== 'form') { go('form'); } else { render(); }
+  toast(FORM.step === 1
+    ? 'กู้ร่างเดิมแล้ว — กรุณายืนยันอีเมลอีกครั้งเพื่อไปขั้นถัดไป'
+    : 'กู้ร่างเดิมแล้ว — อย่าลืมแนบไฟล์หลักฐานใหม่');
+}
+function dismissDraft() {
+  DRAFT.offer = null;
+  clearDraft();
+  render();
+}
+
 function stepsBar() {
   const n = FORM.step;
   function cls(i) {
@@ -729,6 +860,7 @@ function formV() {
 
   return '<div class="sec-head"><h2>ฟอร์มขอรับบริการเพื่อยืมเงิน<b>งบประมาณวิจัย</b></h2>'
     + '<span class="rt">จากแหล่งทุนภายนอก (SRDI External Fund)</span></div>'
+    + draftCardHtml()          // ★ EF-S13: การ์ดเสนอกู้ร่าง (ขึ้นเฉพาะตอนมีร่างค้างจริง)
     + stepsBar() + body;
 }
 
@@ -840,10 +972,11 @@ function validateStep1() {
 async function submitStep1() {
   readStep1();
   if (!validateStep1()) return;
+  saveDraft();     // ★ EF-S13: จดร่างก่อนออกไปขอรหัส OTP — ช่วงนี้แหละที่ผู้ใช้สลับไปเปิดอีเมลแล้วเผลอรีเฟรช
 
   // ยืนยันอีเมลเดิมไว้แล้วและยังไม่หมดอายุ → ข้ามการขอรหัสซ้ำ (cooldown เดินจริง 60 วินาที — กับดักข้อ 27)
   if (AUTH.submit && AUTH.submit.email === FORM.f.email.toLowerCase()) {
-    FORM.step = 2; render(); return;
+    FORM.step = 2; saveDraft(); render(); return;
   }
   const btn = $('btnStep1');
   btn.disabled = true; btn.innerHTML = '<span class="spin"></span>กำลังส่งรหัสยืนยัน...';
@@ -950,7 +1083,7 @@ async function verifyOtpNow() {
     stopResendTimer();
     const next = OTP.next;
     OTP.on = false;
-    if (next === 'form') { FORM.step = 2; render(); }
+    if (next === 'form') { FORM.step = 2; saveDraft(); render(); }   // ★ EF-S13
     else if (next === 'staff') {
       // ★ บทบาทมาจากเซิร์ฟเวอร์เท่านั้น หน้าเว็บไม่ตัดสินเอง
       go(staffRole() === 'admin' ? 'admin' : 'assistant');
@@ -1103,6 +1236,7 @@ function gotoStep(n) {
   if (FORM.step === 2 && $('serviceIdSearch')) FORM.serviceIdSearch = valOf('serviceIdSearch').toUpperCase();
   if (FORM.step === 1) readStep1();
   FORM.step = n;
+  saveDraft();     // ★ EF-S13: จดร่างทุกครั้งที่เปลี่ยนขั้น (ค่าของขั้นเดิมถูกอ่านเข้า FORM แล้วข้างบน)
   render();
 }
 
@@ -1298,34 +1432,206 @@ function wireDropzone() {
   };
 }
 function onPickFile(inp) { if (inp.files && inp.files.length) takeFile(inp.files[0]); inp.value = ''; }
-function takeFile(file) {
+
+/* ============================================================
+   ★★ EF-S12 (ชุด E) — ย่อรูปฝั่งหน้าเว็บก่อนอัปโหลด
+   ------------------------------------------------------------
+   ปัญหาจริง: สลิป/ใบเสร็จที่ถ่ายจากมือถือรุ่นใหม่มัก 5-8 MB ชนเพดาน MAX_UPLOAD_MB (10)
+   ได้ง่ายมาก และต่อให้ไม่ชน ก็อัปโหลดช้าจนผู้ใช้คิดว่าระบบค้าง
+
+   🔴 กับดักที่ roadmap เตือนไว้ตรง ๆ: "ต้องคง EXIF orientation ไม่งั้นรูปตะแคง"
+      รูปจากมือถือมักมี "ธง EXIF Orientation" บอกว่าให้หมุน 90 องศาตอนแสดงผล
+      ถ้าเราวาดลงผืนผ้าใบ (canvas) โดยที่เบราว์เซอร์ไม่ได้หมุนให้ก่อน แล้วบันทึกเป็นไฟล์ใหม่
+      → ธงหายไปพร้อมกับรูปที่ยังไม่ได้หมุน = **หลักฐานราชการตะแคงถาวร แก้ทีหลังไม่ได้**
+
+   ★ มติ EF-D79 — เราจะไม่ "เดา" ว่าเบราว์เซอร์หมุนให้หรือเปล่า เพราะค่าตั้งต้นเรื่องนี้
+     ต่างกันตามยี่ห้อ/รุ่น และเคยถูกเปลี่ยนกลางทางมาแล้ว → ใช้วิธี **ถามด้วยของจริง**:
+       ① สร้างรูป JPEG 2×1 พิกเซล แล้วแปะธง Orientation=6 (หมุน 90°) เข้าไปเอง
+       ② ให้เบราว์เซอร์อ่านรูปนั้นด้วย "เส้นทางเดียวกับที่จะใช้ย่อจริง"
+       ③ ถ้าอ่านออกมาได้ 1×2 = เบราว์เซอร์หมุนให้ (ปลอดภัย ย่อได้)
+          ถ้าได้ 2×1 หรือทดสอบไม่สำเร็จ = **ไม่ย่อเลย ส่งไฟล์ต้นฉบับ**
+     · หลักเดียวกับ EF-D27: ตรวจไม่ได้ว่าปลอดภัย = ไม่ทำ ห้ามถอยไปทำแบบเสี่ยง
+     · ราคาที่จ่าย: เบราว์เซอร์เก่ามากจะไม่ได้ประโยชน์จากการย่อ — ผลคือ "เหมือนเดิม" ไม่ใช่ "พัง"
+   ============================================================ */
+const IMG_MAX_SIDE   = 2000;              // ด้านที่ยาวที่สุดหลังย่อ (พอสำหรับอ่านตัวเลขบนสลิป)
+const IMG_QUALITY    = 0.85;              // คุณภาพ JPEG หลังย่อ
+const IMG_SHRINK_MIN = 1200 * 1024;       // เล็กกว่านี้ไม่ต้องยุ่ง (ไม่คุ้มความเสี่ยง)
+const IMG_SHRINK_CAP = 40 * 1048576;      // ใหญ่เกินนี้ไม่ลองย่อ กันเบราว์เซอร์ค้างเพราะหน่วยความจำ
+
+/* ก้อนข้อมูล EXIF สำเร็จรูป: APP1 + TIFF header + ช่องเดียวคือ Orientation = 6
+   (นับได้ 36 ไบต์ · ช่องความยาวคือ 0x0022 = 34 = ทุกอย่างหลัง FF E1) */
+const EXIF_APP1_ORIENT6 = [
+  0xFF, 0xE1, 0x00, 0x22,                          // APP1 + ความยาว
+  0x45, 0x78, 0x69, 0x66, 0x00, 0x00,              // "Exif\0\0"
+  0x49, 0x49, 0x2A, 0x00, 0x08, 0x00, 0x00, 0x00,  // TIFF header (little endian · IFD0 อยู่ที่ไบต์ 8)
+  0x01, 0x00,                                      // IFD0 มี 1 ช่อง
+  0x12, 0x01, 0x03, 0x00, 0x01, 0x00, 0x00, 0x00,  // tag 0x0112 (Orientation) · ชนิด SHORT · จำนวน 1
+  0x06, 0x00, 0x00, 0x00,                          // ค่า = 6 (หมุน 90° ตามเข็ม)
+  0x00, 0x00, 0x00, 0x00                           // ไม่มี IFD ถัดไป
+];
+
+function b64ToBytes(b64) {
+  const bin = atob(String(b64 || ''));
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+/** จำนวนไบต์จริงของข้อความ base64 (ใช้เทียบขนาดก่อน-หลังย่อ โดยไม่ต้องสร้าง Blob) */
+function b64Bytes(b64) {
+  const s = String(b64 || '');
+  if (!s) return 0;
+  let pad = 0;
+  if (s.charAt(s.length - 1) === '=') pad++;
+  if (s.charAt(s.length - 2) === '=') pad++;
+  return Math.floor(s.length * 3 / 4) - pad;
+}
+/** ★ เฉพาะ JPG/PNG เท่านั้น — PDF ห้ามแตะเด็ดขาด (roadmap ชุด E กำชับ) */
+function isShrinkableImage(file) {
+  const t = String((file && file.type) || '').toLowerCase();
+  return t === 'image/jpeg' || t === 'image/jpg' || t === 'image/png';
+}
+/** คำนวณขนาดปลายทาง — คืน null แปลว่า "ไม่ต้องย่อ" (ฟังก์ชันล้วน ทดสอบได้ไม่ต้องมีเบราว์เซอร์) */
+function shrinkTarget(w, h, maxSide) {
+  if (!(w > 0) || !(h > 0) || !(maxSide > 0)) return null;
+  const longest = Math.max(w, h);
+  if (longest <= maxSide) return null;
+  const k = maxSide / longest;
+  return { w: Math.max(1, Math.round(w * k)), h: Math.max(1, Math.round(h * k)) };
+}
+/** อ่านรูปจาก Blob เข้าหน่วยความจำ — คืน {img, url} · ผู้เรียกต้อง revokeObjectURL(url) เสมอ */
+function decodeImageBlob(blob) {
+  return new Promise(function (resolve, reject) {
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload  = function () { resolve({ img: img, url: url }); };
+    img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('decode')); };
+    img.src = url;
+  });
+}
+/** สร้าง "รูปทดสอบ" JPEG 2×1 ที่มีธง Orientation=6 (มติ EF-D79 ข้อ ①) */
+function buildOrientationProbe() {
+  const cv = document.createElement('canvas');
+  cv.width = 2; cv.height = 1;
+  const cx = cv.getContext('2d');
+  if (!cx) return null;
+  cx.fillStyle = '#ffffff'; cx.fillRect(0, 0, 2, 1);
+  const dataUrl = cv.toDataURL('image/jpeg', 0.5);
+  if (dataUrl.indexOf('data:image/jpeg') !== 0) return null;   // เบราว์เซอร์นี้ทำ JPEG ไม่ได้ → ไม่ย่อ
+  const src = b64ToBytes(dataUrl.split(',')[1]);
+  if (src.length < 4 || src[0] !== 0xFF || src[1] !== 0xD8) return null;
+  const out = new Uint8Array(src.length + EXIF_APP1_ORIENT6.length);
+  out[0] = 0xFF; out[1] = 0xD8;                                // SOI
+  out.set(EXIF_APP1_ORIENT6, 2);                               // แทรก EXIF ต่อจาก SOI ทันที
+  out.set(src.subarray(2), 2 + EXIF_APP1_ORIENT6.length);
+  return new Blob([out], { type: 'image/jpeg' });
+}
+/* ผลตรวจเบราว์เซอร์: null = ยังไม่ตรวจ · true = หมุนให้ (ย่อได้) · false = ไม่หมุน (ห้ามย่อ) */
+let EXIF_SAFE = null;
+async function browserRotatesByExif() {
+  if (EXIF_SAFE !== null) return EXIF_SAFE;
+  EXIF_SAFE = false;                       // ★ ตั้งเป็น "ไม่ปลอดภัย" ไว้ก่อน แล้วค่อยเลื่อนขึ้นเมื่อพิสูจน์ได้
+  let r = null;
+  try {
+    const probe = buildOrientationProbe();
+    if (!probe) return EXIF_SAFE;
+    r = await decodeImageBlob(probe);
+    // รูปต้นทาง 2×1 · ถ้าเบราว์เซอร์หมุนตามธงจริงจะอ่านได้เป็น 1×2 (สูงมากกว่ากว้าง)
+    EXIF_SAFE = (r.img.naturalHeight > r.img.naturalWidth);
+  } catch (e) {
+    EXIF_SAFE = false;
+  } finally {
+    if (r) URL.revokeObjectURL(r.url);
+  }
+  return EXIF_SAFE;
+}
+/** ย่อรูป — คืน {b64, size, mime, from} หรือ null (= ใช้ไฟล์เดิม) */
+async function shrinkImageFile(file, maxSide, quality) {
+  if (!(await browserRotatesByExif())) return null;          // 🔴 เกราะข้อ ③ ของ EF-D79
+  let r = null;
+  try {
+    r = await decodeImageBlob(file);
+    const t = shrinkTarget(r.img.naturalWidth, r.img.naturalHeight, maxSide);
+    if (!t) return null;                                     // ภาพเล็กอยู่แล้ว ไม่ต้องย่อ
+    const cv = document.createElement('canvas');
+    cv.width = t.w; cv.height = t.h;
+    const cx = cv.getContext('2d');
+    if (!cx) return null;
+    cx.drawImage(r.img, 0, 0, t.w, t.h);
+    const mime = (String(file.type).toLowerCase() === 'image/png') ? 'image/png' : 'image/jpeg';
+    const dataUrl = cv.toDataURL(mime, quality);
+    if (dataUrl.indexOf('data:' + mime) !== 0) return null;   // เบราว์เซอร์คืนชนิดอื่นให้ = ไม่เอา
+    const b64 = dataUrl.split(',')[1];
+    const size = b64Bytes(b64);
+    // ★ ย่อแล้วต้องเล็กลงจริงเท่านั้น ไม่งั้นใช้ไฟล์เดิม (PNG บางแบบย่อแล้วโตขึ้นได้)
+    if (!(size > 0) || size >= file.size) return null;
+    return { b64: b64, size: size, mime: mime, from: file.size };
+  } catch (e) {
+    return null;
+  } finally {
+    if (r) URL.revokeObjectURL(r.url);
+  }
+}
+
+let FILE_BUSY = false;
+async function takeFile(file) {
+  if (FILE_BUSY) return;                   // กันกดซ้ำระหว่างกำลังย่อ
   clearFieldErr('eFile');
   const maxMb = (CFG && CFG.max_upload_mb) ? Number(CFG.max_upload_mb) : 10;
-  if (file.size > maxMb * 1048576) {
-    fieldErr('eFile', 'ไฟล์ใหญ่เกิน ' + maxMb + ' MB (ไฟล์ที่เลือกมีขนาด ' + fmtBytes(file.size) + ') กรุณาย่อไฟล์ก่อน');
-    return;
-  }
-  const reader = new FileReader();
-  reader.onload = function () {
-    const raw = String(reader.result || '');
-    const comma = raw.indexOf(',');
+  const maxBytes = maxMb * 1048576;
+
+  FILE_BUSY = true;
+  try {
+    let picked = null;
+    if (isShrinkableImage(file) && file.size > IMG_SHRINK_MIN && file.size <= IMG_SHRINK_CAP) {
+      paintFileBusy('กำลังย่อรูปให้เล็กลง...');
+      picked = await shrinkImageFile(file, IMG_MAX_SIDE, IMG_QUALITY);
+    }
+    if (picked) {
+      if (picked.size > maxBytes) {
+        fieldErr('eFile', 'ย่อรูปให้แล้วแต่ยังใหญ่เกิน ' + maxMb + ' MB (เหลือ ' + fmtBytes(picked.size)
+          + ') กรุณาถ่ายใหม่ด้วยความละเอียดต่ำลง');
+        paintFileList(); return;
+      }
+    } else {
+      // เส้นทางเดิมทุกประการ: ใช้ไฟล์ต้นฉบับ
+      if (file.size > maxBytes) {
+        fieldErr('eFile', 'ไฟล์ใหญ่เกิน ' + maxMb + ' MB (ไฟล์ที่เลือกมีขนาด ' + fmtBytes(file.size) + ') กรุณาย่อไฟล์ก่อน');
+        paintFileList(); return;
+      }
+      paintFileBusy('กำลังอ่านไฟล์...');
+      let raw;
+      try { raw = await readFileB64(file); }
+      catch (e) { fieldErr('eFile', 'อ่านไฟล์ไม่สำเร็จ กรุณาเลือกไฟล์ใหม่'); paintFileList(); return; }
+      picked = { b64: raw.b64, size: file.size, mime: file.type || '', from: 0 };
+    }
     FORM.file = {
       name: file.name,
-      size: file.size,
-      mime: file.type || '',
-      b64: comma >= 0 ? raw.slice(comma + 1) : raw
+      size: picked.size,
+      mime: picked.mime,
+      b64:  picked.b64,
+      shrunkFrom: picked.from || 0        // 0 = ไม่ได้ย่อ · >0 = ขนาดเดิมก่อนย่อ
     };
     paintFileList();
-  };
-  reader.onerror = function () { fieldErr('eFile', 'อ่านไฟล์ไม่สำเร็จ กรุณาเลือกไฟล์ใหม่'); };
-  reader.readAsDataURL(file);
+  } finally {
+    FILE_BUSY = false;
+  }
 }
 function removeFile() { FORM.file = null; paintFileList(); }
+/** ข้อความชั่วคราวระหว่างอ่าน/ย่อไฟล์ — ผู้ใช้ต้องรู้ว่าระบบกำลังทำงานอยู่ ไม่ใช่ค้าง */
+function paintFileBusy(msg) {
+  const el = $('fileList'); if (!el) return;
+  // ★ ใช้ ⏳ ไม่ใช้ .spin เพราะวงกลมหมุนของธีมเป็นสีขาวสำหรับวางบนปุ่มเขียว วางบนการ์ดขาวแล้วมองไม่เห็น
+  el.innerHTML = '<div class="fileitem">⏳ <span class="fn">' + esc(msg) + '</span></div>';
+}
 function paintFileList() {
   const el = $('fileList'); if (!el) return;
   if (!FORM.file) { el.innerHTML = ''; return; }
+  const shrunk = Number(FORM.file.shrunkFrom || 0);
   el.innerHTML = '<div class="fileitem">📄 <span class="fn">' + esc(FORM.file.name) + '</span>'
     + '<span style="color:var(--ink3)">' + fmtBytes(FORM.file.size) + '</span>'
+    // ★ EF-S12: บอกให้เห็นกับตาว่าระบบย่อให้แล้ว ไม่ใช่ทำเงียบ ๆ แล้วผู้ใช้สงสัยว่าไฟล์หายไปไหน
+    + (shrunk > FORM.file.size
+        ? '<span style="color:var(--green)">· ย่อรูปให้แล้วจาก ' + fmtBytes(shrunk) + '</span>' : '')
     + '<button class="x" type="button" aria-label="ลบไฟล์" onclick="removeFile()">✕</button></div>';
 }
 
@@ -1405,6 +1711,7 @@ function validateStep3() {
 function askConfirmSubmit() {
   readStep3();
   if (!validateStep3()) return;
+  saveDraft();     // ★ EF-S13: จดร่างฉบับสมบูรณ์ก่อนเปิดจอทวน — ถ้าเน็ตหลุดตอนส่ง ร่างยังอยู่ครบ
   // ★ ปิดได้จากชีตด้วยคีย์ POPUP_CONFIRM_SUBMIT_ENABLED (มติ EF-D44 ข้อ ③)
   //   💰 ราคาที่จ่ายถ้าปิด: ไม่มีจังหวะให้ผู้ใช้ทวนข้อมูล คำขอที่กรอกผิดจะเยอะขึ้น
   //   ★ การตรวจข้อมูล (validateStep3) ยังเดินเหมือนเดิมทุกกรณี — สวิตช์นี้ปิดแค่ "จอทวน"
@@ -1483,6 +1790,8 @@ async function doSubmitRequest() {
     FORM.result = d;
     FORM.step = 'done';
     FORM.sending = false;
+    // ★ EF-S13: ส่งสำเร็จแล้ว = ร่างหมดหน้าที่ ทิ้งทันที (ไม่ให้ค้างเป็นข้อมูลส่วนบุคคลในเครื่อง)
+    clearDraft(); DRAFT.offer = null;
     closeM();
     render();
   } catch (err) {
@@ -1535,6 +1844,7 @@ function startNewForm() {
   FORM = newForm();
   FORM.f = keep;             // ผู้ยื่นคนเดิม ไม่ต้องกรอกซ้ำ (token ยังอยู่)
   FORM.step = 2;
+  saveDraft();               // ★ EF-S13
   render();
 }
 
@@ -2776,6 +3086,9 @@ async function loadConfig() {
 }
 function boot() {
   loadTokens();
+  // ★ EF-S13: มองหาร่างที่ค้างไว้ตั้งแต่ตอนเปิดหน้า — ต้องมาก่อน renderFromUrl()
+  //   ไม่งั้นถ้าผู้ใช้รีเฟรชขณะอยู่หน้าฟอร์ม จะวาดหน้าเสร็จก่อนแล้วการ์ดไม่ขึ้น (ตระกูลกับดักข้อ 31)
+  DRAFT.offer = readDraft();
   initTheme();
 
   $('ov').addEventListener('click', function (e) { if (e.target.id === 'ov') closeM(); });
