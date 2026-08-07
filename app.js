@@ -32,7 +32,7 @@
    (ห้ามใช้ URL ที่ลงท้ายด้วย /dev — ตัวนั้นใช้ได้เฉพาะตอนที่ท่านล็อกอินบัญชีเจ้าของสคริปต์อยู่)
    ดูขั้นตอนใน README_Phase2_วิธีติดตั้ง.md หมวด 14 (ตาราง "บัญชีจุดที่ต้องกรอกเอง")
 */
-const API_URL = 'https://script.google.com/macros/s/AKfycbydKxpRgWhFxBgxT4Dfk-YMzaM8s_Gi797ylvabLSM-G5yQO57nith6VrCwQKqn9f80-w/exec';
+const API_URL = 'PASTE_WEBAPP_EXEC_URL_HERE';
 
 /* ============================================================
    0) ค่าคงที่ของหน้าเว็บ
@@ -159,7 +159,7 @@ const STATUS_DOT = {
 /* ============================================================
    1) ตัวแปรสถานะรวมของหน้าเว็บ
    ============================================================ */
-let S    = { page: 'home', theme: 'light', sid: '', tid: '' };
+let S    = { page: 'home', theme: 'light', sid: '', tid: '', revise: '' };
 let CFG  = null;                       // config จากหลังบ้าน
 let AUTH = { submit: null, view: null, staff: null };  // token 3 ใบ แยกกันเด็ดขาด (มติ EF-D22)
 /* สถานะของหน้าเจ้าหน้าที่ (เฟส 3) */
@@ -176,6 +176,9 @@ let DETAIL = { loading: false, err: '', data: null };
 let OTP  = { on: false, purpose: '', email: '', next: '', err: '', sending: false, left: 0 };
 let otpTimer = null;
 let EVAL = { tid: '', sid: '', speed: 0, system: 0 };
+/* ★ ชุด G (ฟีเจอร์ E1) — งวดที่กำลังแก้ไขและไฟล์หลักฐานใหม่ที่ผู้ใช้เลือก
+   🔴 แยกจาก FORM.file เด็ดขาด เพื่อไม่ให้ไปทับไฟล์ของฟอร์มยื่นคำขอที่อาจค้างอยู่ */
+let REVISE = { tid: '', sid: '', file: null, sending: false };
 /* ★ EF-S13 (ชุด E) — ร่างฟอร์มที่เจอค้างไว้ตอนเปิดหน้า · null = ไม่มีร่างให้เสนอ */
 let DRAFT = { offer: null };
 
@@ -603,6 +606,10 @@ function readRoute() {
   S.page = PAGES.indexOf(p) >= 0 ? p : 'home';
   S.sid = String(q.get('sid') || '').trim().toUpperCase();
   S.tid = String(q.get('tid') || '').trim().toUpperCase();
+  // ★ ชุด G — ลิงก์ "แก้ไขข้อมูลแล้วส่งกลับ" ในอีเมลชี้มาที่ ?page=track&sid=…&revise=<รหัสธุรกรรม>
+  //   🔴 กับดักข้อ 31: อีเมลเขียนพารามิเตอร์นี้ตั้งแต่ชุด G รอบที่ 1 แล้ว ถ้าตรงนี้ไม่อ่านกลับ
+  //      ปุ่มในอีเมลจะพาผู้ใช้มาลงหน้าติดตามเฉย ๆ แล้วเขาจะไม่รู้ว่าต้องกดอะไรต่อ
+  S.revise = String(q.get('revise') || '').trim().toUpperCase();
 }
 function applyRoute() {
   // หน้าติดตาม/แบบประเมินกรองตาม ?sid= — เปลี่ยนตัวกรองเมื่อไร ต้องโหลดรายการใหม่
@@ -1053,11 +1060,16 @@ function paintResend() {
 }
 
 function otpPanelV() {
-  const purposeText = (OTP.purpose === PURPOSE_VIEW)
-    ? 'เพื่อดูข้อมูลคำขอของท่าน'
-    : (OTP.purpose === PURPOSE_STAFF)
-      ? 'เพื่อเข้าสู่ระบบสำหรับเจ้าหน้าที่'
-      : 'เพื่อยืนยันว่าอีเมลนี้เป็นของท่านจริงก่อนยื่นคำขอ';
+  // ★ ชุด G — บัตร requester_submit ใบเดียวกันถูกใช้ 2 บริบท (ยื่นคำขอ · แก้ไขข้อมูล)
+  //   ถ้าไม่แยกข้อความ ผู้ใช้ที่กำลังจะแก้ไขจะเห็นว่า "ก่อนยื่นคำขอ" แล้วนึกว่ากดผิดปุ่ม
+  //   (เจอตอนเดินจริงในเบราว์เซอร์ · ถ้อยคำกำกวม = บั๊กของระบบ)
+  const purposeText = (OTP.next === 'revise')
+    ? 'เพื่อยืนยันตัวตนก่อนแก้ไขข้อมูลและแนบไฟล์หลักฐานใหม่'
+    : (OTP.purpose === PURPOSE_VIEW)
+      ? 'เพื่อดูข้อมูลคำขอของท่าน'
+      : (OTP.purpose === PURPOSE_STAFF)
+        ? 'เพื่อเข้าสู่ระบบสำหรับเจ้าหน้าที่'
+        : 'เพื่อยืนยันว่าอีเมลนี้เป็นของท่านจริงก่อนยื่นคำขอ';
   const expMin = Math.round(((CFG && CFG.otp_expiry_sec) ? Number(CFG.otp_expiry_sec) : 600) / 60);
   return '<div class="panel">'
     + '<h3 style="font-size:16px;margin-bottom:6px">ยืนยันอีเมลด้วยรหัส 6 หลัก</h3>'
@@ -1126,6 +1138,10 @@ async function verifyOtpNow() {
       // ★ บทบาทมาจากเซิร์ฟเวอร์เท่านั้น หน้าเว็บไม่ตัดสินเอง
       go(staffRole() === 'admin' ? 'admin' : 'assistant');
     }
+    // ★ ชุด G — ยืนยันเสร็จแล้วเปิดหน้าแก้ไขต่อทันที ไม่ต้องให้ผู้ใช้ไปกดปุ่มเดิมซ้ำ
+    //   ไม่เรียก loadTrack() เพราะรายการยังเป็นชุดเดิม และการโหลดใหม่จะล้าง TRACK.items
+    //   จนกล่องแก้ไขหาค่าเดิมมาเติมไม่เจอ
+    else if (next === 'revise') { render(); openReviseModal(); }
     else { render(); loadTrack(); }
     toast(next === 'staff' ? 'เข้าสู่ระบบเรียบร้อยแล้ว' : 'ยืนยันอีเมลเรียบร้อยแล้ว');
   } catch (err) {
@@ -1611,44 +1627,59 @@ async function shrinkImageFile(file, maxSide, quality) {
 }
 
 let FILE_BUSY = false;
-async function takeFile(file) {
-  if (FILE_BUSY) return;                   // กันกดซ้ำระหว่างกำลังย่อ
-  clearFieldErr('eFile');
+
+/**
+ * ★ เตรียมไฟล์ให้พร้อมอัปโหลด — ย่อรูปถ้าเข้าเกณฑ์ (EF-S12) แล้วตรวจเพดานขนาด
+ *
+ * 🔴 กฎเรื่อง "ย่อเมื่อไร" และ "ใหญ่เกินเท่าไร" อยู่ที่ฟังก์ชันนี้ที่เดียว —
+ *    ทั้งฟอร์มยื่นคำขอ (`takeFile`) และหน้าแก้ไขของชุด G (`takeReviseFile`) เรียกตัวเดียวกัน
+ *    ถ้าเขียนซ้ำ 2 ที่ วันหนึ่งเพดานจะเพี้ยนจากกันโดยไม่มีอะไรฟ้อง (บทเรียน EF-D63)
+ *
+ * @returns {Object|null} {name,size,mime,b64,shrunkFrom} · null = ไม่ผ่าน (แสดงข้อความให้แล้ว)
+ */
+async function preparePickedFile(file, errId, busyElId) {
   const maxMb = (CFG && CFG.max_upload_mb) ? Number(CFG.max_upload_mb) : 10;
   const maxBytes = maxMb * 1048576;
 
+  let picked = null;
+  if (isShrinkableImage(file) && file.size > IMG_SHRINK_MIN && file.size <= IMG_SHRINK_CAP) {
+    paintBusyIn(busyElId, 'กำลังย่อรูปให้เล็กลง...');
+    picked = await shrinkImageFile(file, IMG_MAX_SIDE, IMG_QUALITY);
+  }
+  if (picked) {
+    if (picked.size > maxBytes) {
+      fieldErr(errId, 'ย่อรูปให้แล้วแต่ยังใหญ่เกิน ' + maxMb + ' MB (เหลือ ' + fmtBytes(picked.size)
+        + ') กรุณาถ่ายใหม่ด้วยความละเอียดต่ำลง');
+      return null;
+    }
+  } else {
+    // เส้นทางเดิมทุกประการ: ใช้ไฟล์ต้นฉบับ
+    if (file.size > maxBytes) {
+      fieldErr(errId, 'ไฟล์ใหญ่เกิน ' + maxMb + ' MB (ไฟล์ที่เลือกมีขนาด ' + fmtBytes(file.size) + ') กรุณาย่อไฟล์ก่อน');
+      return null;
+    }
+    paintBusyIn(busyElId, 'กำลังอ่านไฟล์...');
+    let raw;
+    try { raw = await readFileB64(file); }
+    catch (e) { fieldErr(errId, 'อ่านไฟล์ไม่สำเร็จ กรุณาเลือกไฟล์ใหม่'); return null; }
+    picked = { b64: raw.b64, size: file.size, mime: file.type || '', from: 0 };
+  }
+  return {
+    name: file.name,
+    size: picked.size,
+    mime: picked.mime,
+    b64:  picked.b64,
+    shrunkFrom: picked.from || 0        // 0 = ไม่ได้ย่อ · >0 = ขนาดเดิมก่อนย่อ
+  };
+}
+
+async function takeFile(file) {
+  if (FILE_BUSY) return;                   // กันกดซ้ำระหว่างกำลังย่อ
+  clearFieldErr('eFile');
   FILE_BUSY = true;
   try {
-    let picked = null;
-    if (isShrinkableImage(file) && file.size > IMG_SHRINK_MIN && file.size <= IMG_SHRINK_CAP) {
-      paintFileBusy('กำลังย่อรูปให้เล็กลง...');
-      picked = await shrinkImageFile(file, IMG_MAX_SIDE, IMG_QUALITY);
-    }
-    if (picked) {
-      if (picked.size > maxBytes) {
-        fieldErr('eFile', 'ย่อรูปให้แล้วแต่ยังใหญ่เกิน ' + maxMb + ' MB (เหลือ ' + fmtBytes(picked.size)
-          + ') กรุณาถ่ายใหม่ด้วยความละเอียดต่ำลง');
-        paintFileList(); return;
-      }
-    } else {
-      // เส้นทางเดิมทุกประการ: ใช้ไฟล์ต้นฉบับ
-      if (file.size > maxBytes) {
-        fieldErr('eFile', 'ไฟล์ใหญ่เกิน ' + maxMb + ' MB (ไฟล์ที่เลือกมีขนาด ' + fmtBytes(file.size) + ') กรุณาย่อไฟล์ก่อน');
-        paintFileList(); return;
-      }
-      paintFileBusy('กำลังอ่านไฟล์...');
-      let raw;
-      try { raw = await readFileB64(file); }
-      catch (e) { fieldErr('eFile', 'อ่านไฟล์ไม่สำเร็จ กรุณาเลือกไฟล์ใหม่'); paintFileList(); return; }
-      picked = { b64: raw.b64, size: file.size, mime: file.type || '', from: 0 };
-    }
-    FORM.file = {
-      name: file.name,
-      size: picked.size,
-      mime: picked.mime,
-      b64:  picked.b64,
-      shrunkFrom: picked.from || 0        // 0 = ไม่ได้ย่อ · >0 = ขนาดเดิมก่อนย่อ
-    };
+    const picked = await preparePickedFile(file, 'eFile', 'fileList');
+    if (picked) FORM.file = picked;
     paintFileList();
   } finally {
     FILE_BUSY = false;
@@ -1656,21 +1687,26 @@ async function takeFile(file) {
 }
 function removeFile() { FORM.file = null; paintFileList(); }
 /** ข้อความชั่วคราวระหว่างอ่าน/ย่อไฟล์ — ผู้ใช้ต้องรู้ว่าระบบกำลังทำงานอยู่ ไม่ใช่ค้าง */
-function paintFileBusy(msg) {
-  const el = $('fileList'); if (!el) return;
+function paintBusyIn(elId, msg) {
+  const el = $(elId); if (!el) return;
   // ★ ใช้ ⏳ ไม่ใช้ .spin เพราะวงกลมหมุนของธีมเป็นสีขาวสำหรับวางบนปุ่มเขียว วางบนการ์ดขาวแล้วมองไม่เห็น
   el.innerHTML = '<div class="fileitem">⏳ <span class="fn">' + esc(msg) + '</span></div>';
+}
+function paintFileBusy(msg) { paintBusyIn('fileList', msg); }
+/** แถวไฟล์ที่เลือกไว้ 1 ไฟล์ (ใช้ร่วมกันทั้งฟอร์มยื่นคำขอและหน้าแก้ไขของชุด G) */
+function fileItemHtml(f, onRemove) {
+  const shrunk = Number(f.shrunkFrom || 0);
+  return '<div class="fileitem">📄 <span class="fn">' + esc(f.name) + '</span>'
+    + '<span style="color:var(--ink3)">' + fmtBytes(f.size) + '</span>'
+    // ★ EF-S12: บอกให้เห็นกับตาว่าระบบย่อให้แล้ว ไม่ใช่ทำเงียบ ๆ แล้วผู้ใช้สงสัยว่าไฟล์หายไปไหน
+    + (shrunk > f.size
+        ? '<span style="color:var(--green)">· ย่อรูปให้แล้วจาก ' + fmtBytes(shrunk) + '</span>' : '')
+    + '<button class="x" type="button" aria-label="ลบไฟล์" onclick="' + onRemove + '">✕</button></div>';
 }
 function paintFileList() {
   const el = $('fileList'); if (!el) return;
   if (!FORM.file) { el.innerHTML = ''; return; }
-  const shrunk = Number(FORM.file.shrunkFrom || 0);
-  el.innerHTML = '<div class="fileitem">📄 <span class="fn">' + esc(FORM.file.name) + '</span>'
-    + '<span style="color:var(--ink3)">' + fmtBytes(FORM.file.size) + '</span>'
-    // ★ EF-S12: บอกให้เห็นกับตาว่าระบบย่อให้แล้ว ไม่ใช่ทำเงียบ ๆ แล้วผู้ใช้สงสัยว่าไฟล์หายไปไหน
-    + (shrunk > FORM.file.size
-        ? '<span style="color:var(--green)">· ย่อรูปให้แล้วจาก ' + fmtBytes(shrunk) + '</span>' : '')
-    + '<button class="x" type="button" aria-label="ลบไฟล์" onclick="removeFile()">✕</button></div>';
+  el.innerHTML = fileItemHtml(FORM.file, 'removeFile()');
 }
 
 /* ---------- อ่านค่า + ตรวจ ขั้นที่ 3 ---------- */
@@ -1899,7 +1935,8 @@ function formAfter() {
    8) หน้า TRACK — ติดตามสถานะรายงวด (SPEC หมวด 9.5)
    ============================================================ */
 function trackV() {
-  if (OTP.on && OTP.next === 'track') return otpPanelV();
+  // ★ ชุด G — แผงกรอกรหัสของ "ขั้นยืนยันก่อนแก้ไข" ใช้หน้าเดียวกับของหน้าติดตาม (มติ EF-D83)
+  if (OTP.on && (OTP.next === 'track' || OTP.next === 'revise')) return otpPanelV();
   if (!AUTH.view) return trackGateV();
   if (TRACK.loading) return loadingCard('กำลังโหลดข้อมูลคำขอของท่าน');
   if (TRACK.err) return errorCard(TRACK.err, 'loadTrack()');
@@ -1967,9 +2004,9 @@ async function loadTrack() {
   }
 }
 function trackAfter() {
-  if (OTP.on && OTP.next === 'track') { wireOtp(); paintResend(); return; }
+  if (OTP.on && (OTP.next === 'track' || OTP.next === 'revise')) { wireOtp(); paintResend(); return; }
   if (AUTH.view && !TRACK.items && !TRACK.loading && !TRACK.err) { loadTrack(); return; }
-  if (TRACK.items) maybeOpenEvaluateFromLink();
+  if (TRACK.items) { maybeOpenEvaluateFromLink(); maybeOpenReviseFromLink(); }
 }
 /** เข้ามาจากลิงก์ "ทำแบบประเมิน" ในอีเมล (?page=evaluate&sid=…&tid=…) → เปิดกล่องประเมินให้เลย */
 function maybeOpenEvaluateFromLink() {
@@ -1979,6 +2016,18 @@ function maybeOpenEvaluateFromLink() {
   if (!hit) { toast('ไม่พบงวดที่ระบุในลิงก์ — กรุณาเลือกจากรายการด้านล่าง'); return; }
   if (hit.can_evaluate) openEvaluate(hit.transaction_id, hit.service_id);
   else toast(hit.has_evaluation ? 'งวดนี้ทำแบบประเมินไปแล้ว' : 'งวดนี้ยังไม่ถึงขั้นทำแบบประเมิน');
+}
+/** ★ ชุด G — เข้ามาจากลิงก์ "แก้ไขข้อมูลแล้วส่งกลับ" ในอีเมล (?page=track&sid=…&revise=…)
+ *  🔴 กับดักข้อ 31: อีเมลของชุด G รอบที่ 1 เขียนพารามิเตอร์ revise มาแล้ว ตัวนี้คือฝั่งที่อ่านกลับ
+ *  ★ ต้องล้าง S.revise ทันทีที่อ่าน ไม่งั้นกล่องจะเด้งซ้ำทุกครั้งที่วาดหน้าใหม่ */
+function maybeOpenReviseFromLink() {
+  if (!S.revise) return;
+  const want = S.revise;
+  S.revise = '';
+  const hit = (TRACK.items || []).filter(function (x) { return x.transaction_id === want; })[0];
+  if (!hit) { toast('ไม่พบงวดที่ระบุในลิงก์ — กรุณาเลือกจากรายการด้านล่าง'); return; }
+  if (hit.is_revision) startRevise(hit.transaction_id, hit.service_id);
+  else toast('งวดนี้ไม่ได้อยู่ในสถานะ "รอการแก้ไข" แล้ว — เจ้าหน้าที่อาจดำเนินการต่อไปแล้ว');
 }
 
 function trackCardHtml(it) {
@@ -1992,6 +2041,13 @@ function trackCardHtml(it) {
   }
   if (it.can_evaluate) {
     acts.push('<button class="btn primary sm" onclick="openEvaluate(\'' + esc(it.transaction_id) + '\',\'' + esc(it.service_id) + '\')">⭐ ทำแบบประเมินเพื่อรับใบเสร็จ</button>');
+  }
+  // ★ ชุด G (ฟีเจอร์ E1) — งวดที่เจ้าหน้าที่ส่งกลับมาให้แก้ ต้องมีทางออกให้ผู้ยื่นเสมอ
+  //   ไม่งั้นเป็นสถานะที่เดินเข้าไปแล้วออกไม่ได้ (SPEC หมวด 5.3)
+  if (it.is_revision) {
+    acts.push('<button class="btn primary sm" id="btnRevise_' + esc(it.transaction_id) + '"'
+      + ' onclick="startRevise(\'' + esc(it.transaction_id) + '\',\'' + esc(it.service_id) + '\')">'
+      + '✏️ แก้ไขข้อมูลแล้วส่งกลับ</button>');
   }
   if (it.receipt_ready && receiptUrl) {
     acts.push('<a class="btn ghost sm" href="' + esc(receiptUrl) + '" target="_blank" rel="noopener">⬇ ดาวน์โหลดใบเสร็จ</a>');
@@ -2232,6 +2288,168 @@ async function submitEvaluationNow() {
 }
 
 /* ============================================================
+   10.5) ★ ชุด G — แก้ไขข้อมูลแล้วส่งกลับ (ฟีเจอร์ E1 · SPEC หมวด 5.3 · มติ EF-D83)
+
+   🔴 กติกา 3 ข้อที่ห้ามถอด
+   ① แก้ได้ 4 ช่องเท่านั้น: ยอดรับโอน · หน่วยงานในใบเสร็จ · รายละเอียดในใบเสร็จ · ไฟล์หลักฐาน
+      (ข้อมูลผู้ขอ/โครงการ/งวด ไม่มีช่องให้แก้เลย — เซิร์ฟเวอร์ก็ไม่รับอยู่แล้ว)
+   ② ต้องมีบัตร requester_submit ก่อนเข้าหน้านี้ — บัตร requester_view ใช้ไม่ได้ (EF-D22 · EF-D50)
+   ③ ไม่แนบไฟล์ใหม่ = ใช้ไฟล์เดิมต่อ ห้ามส่งค่าว่างไปล้างของเดิม
+   ============================================================ */
+
+/** อีเมลของบัตรใบนั้น (ตัวเล็กทั้งหมด) — ใช้เทียบว่าบัตร 2 ใบเป็นของคนเดียวกันไหม */
+function tokenEmailOf(kind) {
+  const t = AUTH[kind];
+  return t ? String(t.email || '').trim().toLowerCase() : '';
+}
+
+/** เริ่มขั้นตอนแก้ไข — มีบัตร "เขียน" ของอีเมลเดียวกันอยู่แล้วก็เข้าได้เลย ไม่งั้นขอรหัสใหม่ */
+function startRevise(tid, sid) {
+  const it = (TRACK.items || []).filter(function (x) { return x.transaction_id === tid; })[0];
+  if (!it || !it.is_revision) { toast('งวดนี้ไม่ได้อยู่ในสถานะ "รอการแก้ไข" แล้ว'); return; }
+  REVISE = { tid: tid, sid: sid || it.service_id, file: null, sending: false };
+  if (AUTH.submit && tokenEmailOf('submit') && tokenEmailOf('submit') === tokenEmailOf('view')) {
+    openReviseModal();
+    return;
+  }
+  requestReviseOtp();
+}
+
+/** ขอรหัสยืนยันใบ "เขียน" ให้อีเมลเดียวกับที่ใช้ดูข้อมูลอยู่ (มติ EF-D83) */
+async function requestReviseOtp() {
+  const em = AUTH.view ? String(AUTH.view.email || '') : '';
+  if (!isEmailLike(em)) { toast('กรุณายืนยันอีเมลที่หน้าติดตามก่อน'); return; }
+  const btn = $('btnRevise_' + REVISE.tid);
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span>กำลังส่งรหัส...'; }
+  try {
+    const d = await api('requestOtp', { email: em, purpose: PURPOSE_SUBMIT, client_hint: clientHint() });
+    startOtp(PURPOSE_SUBMIT, em, 'revise', d);
+  } catch (err) {
+    if (btn) { btn.disabled = false; btn.textContent = '✏️ แก้ไขข้อมูลแล้วส่งกลับ'; }
+    toast(err.msg || 'ขอรหัสยืนยันไม่สำเร็จ');
+  }
+}
+
+function openReviseModal() {
+  const it = (TRACK.items || []).filter(function (x) { return x.transaction_id === REVISE.tid; })[0];
+  if (!it) { toast('ไม่พบงวดที่ต้องการแก้ไข กรุณารีเฟรชหน้าจอ'); return; }
+  // ★ ค่าเดิมมาจาก revise_fields ที่หลังบ้านส่งมาให้แล้วตอนเรียก track (ไม่ต้องยิง API เพิ่ม)
+  const f = it.revise_fields || {};
+  const ev = safeUrl(f.evidence_link);
+
+  openM('<div class="mh"><h3>✏️ แก้ไขข้อมูลแล้วส่งกลับ</h3>'
+    + '<button class="mx" onclick="closeRevise()" aria-label="ปิด">✕</button></div>'
+    + '<div class="mb">'
+    + '<p class="help">รหัสอ้างอิง: ' + esc(REVISE.sid) + ' · เลขที่ธุรกรรม ' + esc(REVISE.tid) + '</p>'
+    + (it.revision_reason
+        ? '<div class="msg warn"><b>สิ่งที่เจ้าหน้าที่ขอให้แก้ไข</b><br>' + esc(it.revision_reason) + '</div>'
+        : '')
+    + '<div class="field"><label class="fl" for="rvAmount">จำนวนเงินที่ได้รับโอนงวดนี้..ต้องเป็นยอดเต็มก่อนหักค่าธรรมเนียมการโอน (บาท) <span class="req">*</span></label>'
+    + '  <input type="number" step="0.01" id="rvAmount" value="' + esc(f.amount_received != null ? f.amount_received : '') + '">'
+    + '  <div class="err-tx" id="eRvAmount" style="display:none"></div></div>'
+    + '<div class="field"><label class="fl" for="rvOrg">ชื่อหน่วยงานในใบเสร็จ <span class="req">*</span></label>'
+    + '  <input type="text" id="rvOrg" maxlength="300" value="' + esc(f.receipt_org || '') + '">'
+    + '  <div class="err-tx" id="eRvOrg" style="display:none"></div></div>'
+    + '<div class="field"><label class="fl" for="rvDetail">รายละเอียดในใบเสร็จรับเงิน <span class="req">*</span></label>'
+    + '  <textarea id="rvDetail" maxlength="1000" rows="2">' + esc(f.receipt_detail || '') + '</textarea>'
+    + '  <div class="err-tx" id="eRvDetail" style="display:none"></div></div>'
+    + '<div class="field"><label class="fl" for="rvFile">หลักฐานการรับโอนเงิน (แนบใหม่เฉพาะเมื่อต้องการเปลี่ยน)</label>'
+    + '  <input type="file" id="rvFile" accept="image/jpeg,image/png,application/pdf" onchange="onPickReviseFile(this)">'
+    + '  <div id="rvFileList"></div>'
+    + '  <p class="help">' + (ev
+        ? 'ไฟล์เดิม: <a href="' + esc(ev) + '" target="_blank" rel="noopener">เปิดดูไฟล์ที่แนบไว้</a> · '
+        : '')
+    + 'ไม่แนบไฟล์ใหม่ = ระบบใช้ไฟล์เดิมต่อ</p>'
+    + '  <div class="err-tx" id="eRvFile" style="display:none"></div></div>'
+    + '<div class="msg info">ข้อมูลผู้ขอรับบริการ ข้อมูลโครงการ และงวดที่ขอเบิก แก้ไขจากหน้านี้ไม่ได้ '
+    + 'หากต้องแก้ส่วนนั้นกรุณาติดต่อเจ้าหน้าที่</div>'
+    + '<div class="err-tx" id="eRv" style="display:none"></div>'
+    + '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">'
+    + '<button class="btn primary" id="btnRv" onclick="submitRevisionNow()">ส่งข้อมูลที่แก้ไขแล้ว</button>'
+    + '<button class="btn ghost" onclick="closeRevise()">ยังไม่ส่ง</button>'
+    + '</div></div>');
+}
+
+function closeRevise() { REVISE.file = null; closeM(); }
+
+function onPickReviseFile(inp) {
+  if (inp.files && inp.files.length) takeReviseFile(inp.files[0]);
+  inp.value = '';
+}
+async function takeReviseFile(file) {
+  if (FILE_BUSY) return;
+  clearFieldErr('eRvFile');
+  FILE_BUSY = true;
+  try {
+    const picked = await preparePickedFile(file, 'eRvFile', 'rvFileList');
+    if (picked) REVISE.file = picked;
+    paintReviseFile();
+  } finally {
+    FILE_BUSY = false;
+  }
+}
+function removeReviseFile() { REVISE.file = null; paintReviseFile(); }
+function paintReviseFile() {
+  const el = $('rvFileList'); if (!el) return;
+  if (!REVISE.file) { el.innerHTML = ''; return; }
+  el.innerHTML = fileItemHtml(REVISE.file, 'removeReviseFile()');
+}
+
+async function submitRevisionNow() {
+  if (REVISE.sending) return;
+  ['eRv', 'eRvAmount', 'eRvOrg', 'eRvDetail'].forEach(clearFieldErr);
+  const amount = valOf('rvAmount');
+  const org    = valOf('rvOrg');
+  const detail = valOf('rvDetail');
+
+  // ★ ถ้อยคำเตือนใช้ชุดเดียวกับขั้นที่ 3 ของฟอร์มยื่นคำขอ (มติ EF-D5 — ห้ามคิดคำใหม่)
+  let bad = false;
+  if (!amount || numOf(amount) <= 0) { fieldErr('eRvAmount', 'กรุณากรอกจำนวนเงินที่ได้รับโอนงวดนี้'); bad = true; }
+  if (!org)    { fieldErr('eRvOrg', 'กรุณากรอกชื่อหน่วยงานในใบเสร็จ'); bad = true; }
+  if (!detail) { fieldErr('eRvDetail', 'กรุณากรอกรายละเอียดในใบเสร็จรับเงิน'); bad = true; }
+  if (bad) return;
+
+  const btn = $('btnRv');
+  REVISE.sending = true;
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span>กำลังส่ง...'; }
+  try {
+    const body = {
+      token: tokenOf('submit'),
+      transaction_id: REVISE.tid,
+      amount_received: numOf(amount),
+      receipt_org: org,
+      receipt_detail: detail,
+      client_hint: clientHint()
+    };
+    // ★ แนบไฟล์ใหม่ = ขอใบเบิกก่อนเหมือนตอนยื่นคำขอ (มติ EF-D35 · EF-D50)
+    if (REVISE.file) {
+      if (btn) btn.innerHTML = '<span class="spin"></span>กำลังอัปโหลดไฟล์...';
+      const up = await api('uploadAttachment', {
+        token: tokenOf('submit'),
+        file_name: REVISE.file.name,
+        data_base64: REVISE.file.b64,
+        client_hint: clientHint()
+      });
+      body.upload_token = up.upload_token;
+      if (btn) btn.innerHTML = '<span class="spin"></span>กำลังส่งข้อมูล...';
+    }
+
+    const d = await api('submitRevision', body);
+    REVISE.sending = false;
+    closeRevise();
+    toast((d && d.message) ? d.message : 'ส่งข้อมูลที่แก้ไขแล้วเรียบร้อย');
+    // 🔴 กับดักข้อ 38: สถานะเปลี่ยนแล้ว ต้องล้างของเก่า "ทุกหน้า" ที่แสดงรายการนี้
+    TRACK.items = null;
+    DETAIL.data = null; DETAIL.err = '';
+    loadTrack();
+  } catch (err) {
+    REVISE.sending = false;
+    if (btn) { btn.disabled = false; btn.textContent = 'ส่งข้อมูลที่แก้ไขแล้ว'; }
+    fieldErr('eRv', err.msg || 'ส่งข้อมูลที่แก้ไขไม่สำเร็จ');
+  }
+}
+
+/* ============================================================
    11) กู้คืนรหัสบริการ ("ลืมรหัสบริการ?")
        ★ ห้ามบอกบนจอว่าอีเมลนี้มีข้อมูลในระบบหรือไม่ (มติ EF-D23)
        หน้าเว็บแสดงข้อความกลางที่หลังบ้านส่งมาเท่านั้น ไม่ตีความเพิ่มเอง
@@ -2360,6 +2578,10 @@ function staffRowHtml(r, opt) {
             + '<input type="file" id="fl_' + esc(tid) + '" accept="image/jpeg,image/png,application/pdf" '
             + 'style="display:' + (rowNeedsFile(tid, nexts) ? '' : 'none') + '" aria-label="แนบไฟล์เอกสาร">'
             + '<button class="btn primary" id="up_' + esc(tid) + '" onclick="doRowUpdate(\'' + esc(tid) + '\')">อัปเดตสถานะ</button>'
+          : '')
+      // ★ ชุด G (ฟีเจอร์ E1) — can_revise คำนวณจากเซิร์ฟเวอร์เท่านั้น หน้าเว็บไม่เดาจากชื่อสถานะเอง
+      + (r.can_revise
+          ? '<button class="btn ghost" onclick="openRevisionAskModal(\'' + esc(tid) + '\')">ขอให้แก้ไข</button>'
           : '')
       + (r.can_cancel
           ? '<button class="btn warn" onclick="openCancelModal(\'' + esc(tid) + '\')">ยกเลิกบริการ</button>'
@@ -2500,6 +2722,43 @@ async function doCancelService(tid) {
     fieldErr('eCx', err.msg || 'ยกเลิกไม่สำเร็จ');
   }
 }
+/* ---------- ★ ชุด G — ปุ่ม "ขอให้แก้ไข" ของผู้ดูแล (ฟีเจอร์ E1) ----------
+   🔴 บังคับพิมพ์ว่าให้แก้อะไร แบบเดียวกับการยกเลิกที่บังคับเหตุผล
+      ถ้าไม่บังคับ ผู้ยื่นจะได้อีเมลที่บอกว่า "กรุณาแก้ไข" โดยไม่รู้ว่าต้องแก้อะไร */
+function openRevisionAskModal(tid) {
+  openM('<div class="mh"><h3>ขอให้ผู้ยื่นแก้ไขข้อมูล</h3><button class="mx" onclick="closeM()" aria-label="ปิด">✕</button></div>'
+    + '<div class="mb">'
+    + '<p>รหัสธุรกรรม <b>' + esc(tid) + '</b> — ระบบจะส่งอีเมลแจ้งผู้ยื่นพร้อมข้อความด้านล่าง '
+    + 'และ<b>ย้อนกลับมาที่ขั้นเดิมให้อัตโนมัติ</b>เมื่อผู้ยื่นส่งข้อมูลที่แก้แล้วกลับมา</p>'
+    + '<div class="field"><label class="fl" for="rqReason">ต้องการให้แก้ไขอะไร <span class="req">*</span></label>'
+    + '<textarea id="rqReason" rows="3" maxlength="1000" placeholder="เช่น ยอดเงินที่กรอกไม่ตรงกับหลักฐานการโอน กรุณาตรวจสอบและแนบสลิปใหม่"></textarea></div>'
+    + '<div class="msg info">ผู้ยื่นจะแก้ได้ 4 อย่าง คือ จำนวนเงินที่ได้รับโอน · ชื่อหน่วยงานในใบเสร็จ · '
+    + 'รายละเอียดในใบเสร็จรับเงิน · และไฟล์หลักฐานการรับโอนเงิน</div>'
+    + '<div class="err-tx" id="eRq" style="display:none"></div>'
+    + '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">'
+    + '<button class="btn primary" id="btnRq" onclick="doRequestRevision(\'' + esc(tid) + '\')">ส่งกลับไปให้แก้ไข</button>'
+    + '<button class="btn ghost" onclick="closeM()">ไม่ส่งกลับ</button>'
+    + '</div></div>');
+}
+async function doRequestRevision(tid) {
+  clearFieldErr('eRq');
+  const reason = valOf('rqReason');
+  if (reason.length < 5) { fieldErr('eRq', 'กรุณาระบุว่าต้องการให้แก้ไขอะไรอย่างน้อย 5 ตัวอักษร'); return; }
+  const btn = $('btnRq');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>กำลังส่งกลับ...';
+  try {
+    const d = await api('requestRevision', {
+      token: tokenOf('staff'), transaction_id: tid, reason: reason, client_hint: clientHint()
+    });
+    closeM();
+    toast((d && d.message) ? d.message : 'ส่งคำขอกลับไปให้ผู้ยื่นแก้ไขแล้ว');
+    await reloadStaffPage();
+  } catch (err) {
+    btn.disabled = false; btn.textContent = 'ส่งกลับไปให้แก้ไข';
+    fieldErr('eRq', err.msg || 'ส่งกลับไปให้แก้ไขไม่สำเร็จ');
+  }
+}
+
 /** โหลดหน้าเจ้าหน้าที่ที่กำลังเปิดอยู่ใหม่ (หลังเปลี่ยนแปลงข้อมูล)
  *  🐛 ★★ ชุด B แก้กับดักข้อ 38 ที่ค้างมาตั้งแต่เฟส 3: ของเดิมล้างเฉพาะหน้าที่เปิดอยู่
  *     → เดินสถานะบนแดชบอร์ดแล้วสลับไปหน้าคิวงาน จะเห็นรายการเก่าค้างอยู่โดยไม่มีอะไรฟ้อง
@@ -2587,7 +2846,12 @@ function adminV() {
     + '<div class="grid g4" style="margin-bottom:6px">'
     + statCard('จำนวนคำขอ', c.services)
     + statCard('จำนวนธุรกรรม', c.transactions)
-    + statCard('กำลังดำเนินการ', c.in_progress)
+    // ★ ชุด G — หลังบ้านนับใบที่รอผู้ยื่นแก้ไขให้อยู่แล้ว (cards.revision) แต่เดิมไม่มีใครเอามาแสดง
+    //   วางเป็น "บรรทัดรอง" ของการ์ดกำลังดำเนินการ เพราะมันคือ *ส่วนหนึ่ง* ของยอดนั้น ไม่ใช่ยอดแยก
+    //   → ผู้ดูแลอ่านออกทันทีว่า "ที่ค้างอยู่ กี่ใบที่รอเราทำ กี่ใบที่รอผู้ยื่น"
+    //   ★ ไม่เพิ่มการ์ดใหม่ = ตารางการ์ดไม่ต้องจัดแถวใหม่ (เลี่ยงตระกูลกับดักข้อ 43)
+    + statCard('กำลังดำเนินการ', c.in_progress,
+        c.revision ? 'ในนี้รอผู้ยื่นแก้ไข ' + Number(c.revision).toLocaleString('th-TH') + ' รายการ' : '')
     + statCard('เสร็จสิ้น', c.done)
     + '</div>'
     + '<div class="grid g3" style="margin-bottom:14px">'
@@ -2928,7 +3192,9 @@ const AUDIT_ACTION_TH = {
   RECOVER_ID: 'ส่งรายการรหัสบริการทางอีเมล',
   RECOVER_ID_NOT_FOUND: '⚠️ ขอรายการรหัสด้วยอีเมลที่ไม่มีคำขอ',
   UPDATE_STATUS: 'เดินสถานะ', CANCEL_SERVICE: 'ยกเลิกบริการ', EXPORT_CSV: 'ส่งออก CSV',
-  BACKUP_CREATE: 'สำรองข้อมูล', BACKUP_PRUNE: 'ลบสำเนาสำรองที่หมดอายุ', BACKUP_FAIL: '⚠️ สำรองข้อมูลไม่สำเร็จ'
+  BACKUP_CREATE: 'สำรองข้อมูล', BACKUP_PRUNE: 'ลบสำเนาสำรองที่หมดอายุ', BACKUP_FAIL: '⚠️ สำรองข้อมูลไม่สำเร็จ',
+  /* ★ ชุด G (ฟีเจอร์ E1) — ไม่แปลไว้ = หน้าร่องรอยจะโชว์รหัสอังกฤษดิบให้ผู้ดูแลอ่านเอง */
+  REQUEST_REVISION: 'ขอให้ผู้ยื่นแก้ไข', SUBMIT_REVISION: 'ผู้ยื่นส่งข้อมูลที่แก้ไขแล้ว'
 };
 /* เหตุการณ์ที่ควรจับตาเป็นพิเศษ — ต่อยอดตรง ๆ กับ EF-S7 และ EF-S11 ที่ยังไม่ได้ทำ */
 const AUDIT_WATCH = ['OTP_REQUEST_NOT_STAFF', 'RECEIPT_MISSING', 'RECOVER_ID_NOT_FOUND', 'BACKUP_FAIL'];
