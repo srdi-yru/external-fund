@@ -32,7 +32,7 @@
    (ห้ามใช้ URL ที่ลงท้ายด้วย /dev — ตัวนั้นใช้ได้เฉพาะตอนที่ท่านล็อกอินบัญชีเจ้าของสคริปต์อยู่)
    ดูขั้นตอนใน README_Phase2_วิธีติดตั้ง.md หมวด 14 (ตาราง "บัญชีจุดที่ต้องกรอกเอง")
 */
-const API_URL = 'https://script.google.com/macros/s/AKfycbydKxpRgWhFxBgxT4Dfk-YMzaM8s_Gi797ylvabLSM-G5yQO57nith6VrCwQKqn9f80-w/exec';
+const API_URL = 'PASTE_WEBAPP_EXEC_URL_HERE';
 
 /* ============================================================
    0) ค่าคงที่ของหน้าเว็บ
@@ -181,6 +181,10 @@ let EVAL = { tid: '', sid: '', speed: 0, system: 0 };
 let REVISE = { tid: '', sid: '', file: null, sending: false };
 /* ★ EF-S13 (ชุด E) — ร่างฟอร์มที่เจอค้างไว้ตอนเปิดหน้า · null = ไม่มีร่างให้เสนอ */
 let DRAFT = { offer: null };
+/* ★ ชุด D — กล่อง "ดูรายละเอียดเต็ม" ของเจ้าหน้าที่ (ข้อมูลไปกรอกระบบกลางของมหาวิทยาลัย)
+   🔴 ไม่เก็บ cache ข้ามการเปิด: ทุกครั้งที่กดปุ่มต้องยิงใหม่ ไม่งั้นจะเห็นค่าเก่าหลังผู้ยื่นแก้ข้อมูล
+      (กับดักข้อ 38 — หน้าที่จำข้อมูลไว้แล้วโหลดใหม่เฉพาะเมื่อ id เปลี่ยน จะค้างของเก่า) */
+let SDETAIL = { tid: '', loading: false, err: '', data: null };
 
 function newForm() {
   return {
@@ -2607,6 +2611,13 @@ function staffRowHtml(r, opt) {
     + '  <div><b>' + esc(r.project_title) + '</b></div>'
     + '  <div class="help">' + esc(r.full_name) + ' · ' + esc(r.email) + ' · ' + esc(r.faculty) + '</div>'
     + '  <div class="help">ยอดรับโอนงวดนี้ <b>' + fmtMoney(r.amount_received) + '</b> บาท · แหล่งทุน ' + esc(r.funding_source) + '</div>'
+    // ★ ชุด D — 2 ช่องนี้คือ 2 ใน 4 ช่องที่ผู้ยื่นแก้ได้ แต่แถวงานไม่เคยแสดงเลย
+    //   🔴 ผลจริงเมื่อ 8 ส.ค. 2569: ผู้ดูแลแก้รายละเอียดใบเสร็จ แล้วกลับมาดูเห็นแต่ยอดเงินที่ไม่ได้แก้
+    //      จึงสรุปว่าระบบไม่บันทึก ทั้งที่ชีตบันทึกครบถูกต้อง — การแสดงผลไม่ครบอันตรายพอ ๆ กับบั๊กจริง
+    + ((r.receipt_org || r.receipt_detail)
+        ? '<div class="help">ใบเสร็จออกในนาม <b>' + esc(r.receipt_org || '—') + '</b>'
+          + ' · รายละเอียด <b>' + esc(r.receipt_detail || '—') + '</b></div>'
+        : '')
     + (links.length ? '<div class="help">เอกสาร: ' + links.join(' · ') + '</div>' : '')
     + (r.revision_reason ? '<div class="msg warn">เคยขอให้แก้ไข: ' + esc(r.revision_reason) + '</div>' : '')
     // ★ ชุด B (EF-S19): ใบที่ถูกยกเลิกต้องบอกเหตุผล/คนกด/เวลาบนจอ ไม่ต้องไปเปิดชีตหรือไล่ AuditLog
@@ -2615,6 +2626,11 @@ function staffRowHtml(r, opt) {
           + (r.cancelled_by ? ' โดย ' + esc(r.cancelled_by) : '')
           + '<br>เหตุผล: ' + esc(r.cancel_reason || '(ไม่ได้บันทึกเหตุผลไว้ — ข้อมูลก่อนระบบ 2.0)') + '</div>'
         : '')
+    // ★ ชุด D — ปุ่มดูรายละเอียดเต็ม · อยู่ใน st-body ไม่ใช่ในแถบปุ่มดำเนินการ
+    //   เพราะต้องกดได้ทุกแถว รวมใบที่ยกเลิกแล้วและใบที่ไม่มีขั้นถัดไป (แถบนั้นถูกซ่อน)
+    + '<div class="btns" style="margin-top:8px">'
+    + '  <button class="btn ghost" onclick="openStaffDetail(\'' + esc(tid) + '\')">📄 ดูรายละเอียดเต็ม</button>'
+    + '</div>'
     + '</div>'
     + ctrl
     + '</div>';
@@ -2757,6 +2773,187 @@ async function doRequestRevision(tid) {
     btn.disabled = false; btn.textContent = 'ส่งกลับไปให้แก้ไข';
     fieldErr('eRq', err.msg || 'ส่งกลับไปให้แก้ไขไม่สำเร็จ');
   }
+}
+
+/* ============================================================
+   ★ ชุด D — กล่อง "ดูรายละเอียดเต็ม" ของเจ้าหน้าที่ (D4)
+
+   ทำไมต้องมี (คุณสุ่ยบอกเองจากงานจริง 8 ส.ค. 2569):
+     ข้อมูลในแบบฟอร์มยื่นคำร้องทั้งหมดต้องถูกนำไปกรอกใส่ระบบกลางของมหาวิทยาลัยทุกใบ
+     แต่แถวงานแสดงข้อมูลย่อ → เจ้าหน้าที่ต้องเปิดชีตเองทุกครั้ง
+
+   🔴 ยิงหลังบ้านใหม่ทุกครั้งที่กดปุ่ม ไม่ใช้ค่าที่ค้างในหน่วยความจำ (กับดักข้อ 38)
+   ============================================================ */
+async function openStaffDetail(tid) {
+  SDETAIL = { tid: tid, loading: true, err: '', data: null };
+  paintStaffDetail();
+  try {
+    SDETAIL.data = await api('staffServiceDetail', {
+      token: tokenOf('staff'), transaction_id: tid, client_hint: clientHint()
+    });
+    SDETAIL.loading = false;
+  } catch (err) {
+    SDETAIL.loading = false;
+    SDETAIL.err = err.msg || 'โหลดรายละเอียดไม่สำเร็จ';
+  }
+  paintStaffDetail();
+}
+
+function paintStaffDetail() {
+  openM('<div class="mh"><h3>รายละเอียดคำขอฉบับเต็ม</h3>'
+    + '<button class="mx" onclick="closeM()" aria-label="ปิด">✕</button></div>'
+    + '<div class="mb">' + staffDetailBodyHtml() + '</div>');
+}
+
+function staffDetailBodyHtml() {
+  if (SDETAIL.loading) return '<div class="help"><span class="spin"></span> กำลังโหลดรายละเอียด...</div>';
+  if (SDETAIL.err) {
+    return '<div class="msg err">' + esc(SDETAIL.err) + '</div>'
+      + '<button class="btn ghost" onclick="openStaffDetail(\'' + esc(SDETAIL.tid) + '\')">ลองใหม่</button>';
+  }
+  if (!SDETAIL.data) return '<div class="help">ไม่มีข้อมูล</div>';
+
+  const d = SDETAIL.data, r = d.requester || {}, p = d.project || {};
+
+  // งบแยกหน่วยงาน — เซิร์ฟเวอร์ส่งมาครบทุกหน่วยงานเสมอ หน้าเว็บไม่ตัดทิ้งเอง
+  const distRows = Object.keys(p.budget_distribution || {}).map(function (k) {
+    return '<div class="rrow"><span>' + esc(k) + '</span><b>'
+      + fmtMoney(p.budget_distribution[k]) + ' บาท</b></div>';
+  }).join('');
+
+  return '<div class="btns" style="margin-bottom:10px">'
+    + '  <button class="btn primary" id="btnSdCopy" onclick="copyStaffDetail()">📋 คัดลอกข้อมูลทั้งหมด</button>'
+    + '  <button class="btn ghost" onclick="openStaffDetail(\'' + esc(SDETAIL.tid) + '\')">↻ โหลดใหม่</button>'
+    + '</div>'
+    + '<div class="msg info">คัดลอกแล้วนำไปวางในระบบกลางของมหาวิทยาลัยได้ทันที '
+    + '· ข้อมูลชุดนี้อ่านสดจากฐานข้อมูลทุกครั้งที่เปิด</div>'
+
+    + '<h4 style="margin:12px 0 6px">1 · ข้อมูลผู้ขอรับบริการ</h4>'
+    + '<dl class="dl">'
+    + dt('รหัสบริการ', r.service_id) + dt('ชื่อ-สกุล', r.full_name)
+    + dt('ประเภทบุคลากร', r.staff_type) + dt('ชื่อโครงการวิจัยที่รับผิดชอบ', r.researcher_project)
+    + dt('สังกัด/คณะ', r.faculty) + dt('หน่วยงานย่อย', r.sub_unit)
+    + dt('หมายเลขโทรศัพท์', r.phone) + dt('อีเมล', r.email)
+    + '</dl>'
+
+    + '<h4 style="margin:12px 0 6px">2 · รายละเอียดโครงการและงบประมาณ</h4>'
+    + '<dl class="dl">'
+    + dt('ชื่อโครงการ', p.project_title) + dt('ปีงบประมาณ', p.fiscal_year)
+    + dt('แหล่งงบประมาณ', p.funding_source)
+    + dt('งบประมาณทั้งโครงการ', fmtMoney(p.total_budget) + ' บาท')
+    + dt('วันที่เริ่มต้นโครงการ', fmtDate(p.period_start))
+    + dt('วันที่สิ้นสุดโครงการ', fmtDate(p.period_end))
+    + dt('รหัสอ้างอิงโครงการ', p.ref_service_id)
+    + dt('ยื่นคำขอเมื่อ', fmtDate(p.created_at, true))
+    + '</dl>'
+    + '<div style="margin-top:10px"><b style="font-size:13.5px">งบประมาณแยกตามหน่วยงาน</b>'
+    + (distRows || '<div class="help">ไม่ได้ระบุ</div>')
+    + '<div class="distsum ' + (p.budget_sum_matches ? 'ok' : 'bad') + '"><span>รวม '
+    + fmtMoney(p.budget_distribution_sum) + ' / ' + fmtMoney(p.total_budget) + ' บาท'
+    + (p.budget_sum_matches ? ' ✓' : ' (ไม่ตรงกับงบรวม)') + '</span></div></div>'
+    + ((p.data_flags && p.data_flags.length)
+        ? '<div class="msg warn">หมายเหตุคุณภาพข้อมูล: ' + p.data_flags.map(esc).join(' · ') + '</div>' : '')
+
+    + '<h4 style="margin:14px 0 6px">3 · รายการธุรกรรมรายงวด</h4>'
+    + (d.transactions || []).map(staffTxHtml).join('')
+
+    + '<h4 style="margin:14px 0 6px">4 · ประวัติการดำเนินการทุกรอบ</h4>'
+    + staffHistoryHtml(d);
+}
+
+/** 1 งวดในกล่องรายละเอียดเต็ม — เจ้าหน้าที่เห็นเอกสารได้เสมอ (เซิร์ฟเวอร์ตัดสินให้แล้ว) */
+function staffTxHtml(t) {
+  const links = [];
+  [[t.evidence_link, 'หลักฐานการรับโอน'], [t.receipt_link, 'สำเนาใบเสร็จรับเงิน'],
+   [t.return_doc_link, 'สำเนาหนังสือนำส่งแหล่งทุน'], [t.pdf_link, 'แบบคำขอ (PDF)']]
+    .forEach(function (x) {
+      const u = safeUrl(x[0]);
+      if (u) links.push('<a href="' + esc(u) + '" target="_blank" rel="noopener">' + esc(x[1]) + '</a>');
+    });
+  return '<div class="panel" style="margin-bottom:10px;box-shadow:none">'
+    + '<div class="tc-head"><span class="tc-id">งวดที่ ' + esc(t.installment_no) + '</span>' + badge(t.status) + '</div>'
+    + '<dl class="dl" style="margin-top:8px">'
+    + dt('เลขที่ธุรกรรม', t.transaction_id)
+    + dt('จำนวนเงินที่ได้รับโอน', fmtMoney(t.amount_received) + ' บาท')
+    + dt('ชื่อหน่วยงานในใบเสร็จ', t.receipt_org)
+    + dt('รายละเอียดในใบเสร็จรับเงิน', t.receipt_detail)
+    + dt('ยื่นเมื่อ', fmtDate(t.submitted_at, true))
+    + dt('เหตุผลที่ขอให้แก้ไขล่าสุด', t.revision_reason)
+    + (t.revision_count ? dt('จำนวนครั้งที่ถูกส่งกลับแก้', t.revision_count + ' ครั้ง') : '')
+    + (t.last_revision_at ? dt('ส่งกลับแก้ล่าสุดเมื่อ', fmtDate(t.last_revision_at, true)) : '')
+    + '</dl>'
+    + (links.length ? '<div class="help">เอกสาร: ' + links.join(' · ') + '</div>' : '')
+    + '</div>';
+}
+
+/** ★ ไทม์ไลน์ทุกรอบ (มติ EF-D85) — แปลรหัสด้วยชุดคำเดียวกับหน้าร่องรอย ห้ามคิดคำใหม่ */
+function staffHistoryHtml(d) {
+  const rows = d.history || [];
+  if (!rows.length) return '<div class="help">ยังไม่มีร่องรอยการดำเนินการของคำขอใบนี้</div>';
+  return (d.history_truncated
+      ? '<div class="msg warn">คำขอใบนี้มีประวัติ ' + esc(d.history_total)
+        + ' รายการ · แสดงเฉพาะ ' + esc(rows.length) + ' รายการล่าสุด</div>'
+      : '')
+    + '<ul class="tl">'
+    + rows.map(function (h) {
+        const detail = [h.from_value && h.to_value ? (h.from_value + ' → ' + h.to_value) : (h.to_value || ''), h.note]
+          .filter(function (x) { return x; }).join(' · ');
+        // ★ ใช้ชั้นสไตล์เดียวกับไทม์ไลน์เดิม (.d / .tt / .tm) — ไม่แตะ styles.css เลย
+        return '<li>'
+          + '<span class="d gn"></span>'
+          + '<div class="tt">' + esc(auditActionTh(h.action)) + '</div>'
+          + '<div class="tm">' + esc(fmtDate(h.timestamp, true))
+          + (detail ? ' · ' + esc(detail) : '')
+          + (h.actor_email ? ' · โดย ' + esc(h.actor_email) : '')
+          + '</div></li>';
+      }).join('')
+    + '</ul>';
+}
+
+/** ข้อความล้วนสำหรับคัดลอกไปกรอกระบบกลาง (ลอกวิธีจากปุ่มคัดลอกรหัสบริการของ EF-S14) */
+function staffDetailCopyText() {
+  const d = SDETAIL.data;
+  if (!d) return '';
+  const r = d.requester || {}, p = d.project || {};
+  const L = [];
+  L.push('รหัสบริการ: ' + (r.service_id || ''));
+  L.push('ชื่อ-สกุล: ' + (r.full_name || ''));
+  L.push('ประเภทบุคลากร: ' + (r.staff_type || ''));
+  L.push('ชื่อโครงการวิจัยที่รับผิดชอบ: ' + (r.researcher_project || ''));
+  L.push('สังกัด/คณะ: ' + (r.faculty || ''));
+  L.push('หน่วยงานย่อย: ' + (r.sub_unit || ''));
+  L.push('โทรศัพท์: ' + (r.phone || ''));
+  L.push('อีเมล: ' + (r.email || ''));
+  L.push('');
+  L.push('ชื่อโครงการ: ' + (p.project_title || ''));
+  L.push('ปีงบประมาณ: ' + (p.fiscal_year || ''));
+  L.push('แหล่งงบประมาณ: ' + (p.funding_source || ''));
+  L.push('งบประมาณทั้งโครงการ: ' + fmtMoney(p.total_budget) + ' บาท');
+  L.push('ระยะเวลาโครงการ: ' + fmtDate(p.period_start) + ' ถึง ' + fmtDate(p.period_end));
+  L.push('');
+  L.push('งบประมาณแยกตามหน่วยงาน');
+  Object.keys(p.budget_distribution || {}).forEach(function (k) {
+    L.push('  ' + k + ': ' + fmtMoney(p.budget_distribution[k]) + ' บาท');
+  });
+  (d.transactions || []).forEach(function (t) {
+    L.push('');
+    L.push('งวดที่ ' + t.installment_no + ' (' + t.transaction_id + ')');
+    L.push('  ยอดรับโอน: ' + fmtMoney(t.amount_received) + ' บาท');
+    L.push('  ใบเสร็จออกในนาม: ' + (t.receipt_org || ''));
+    L.push('  รายละเอียดในใบเสร็จ: ' + (t.receipt_detail || ''));
+    L.push('  สถานะปัจจุบัน: ' + (t.status || ''));
+  });
+  return L.join('\n');
+}
+
+async function copyStaffDetail() {
+  const okCopy = await copyToClipboard(staffDetailCopyText());
+  const btn = $('btnSdCopy');
+  if (btn) {
+    btn.textContent = okCopy ? '✓ คัดลอกแล้ว' : '⚠ คัดลอกไม่สำเร็จ';
+    setTimeout(function () { if ($('btnSdCopy')) $('btnSdCopy').textContent = '📋 คัดลอกข้อมูลทั้งหมด'; }, 2000);
+  }
+  if (!okCopy) toast('เบราว์เซอร์ไม่อนุญาตให้คัดลอกอัตโนมัติ กรุณาลากคลุมข้อความแล้วคัดลอกเอง');
 }
 
 /** โหลดหน้าเจ้าหน้าที่ที่กำลังเปิดอยู่ใหม่ (หลังเปลี่ยนแปลงข้อมูล)
