@@ -32,7 +32,7 @@
    (ห้ามใช้ URL ที่ลงท้ายด้วย /dev — ตัวนั้นใช้ได้เฉพาะตอนที่ท่านล็อกอินบัญชีเจ้าของสคริปต์อยู่)
    ดูขั้นตอนใน README_Phase2_วิธีติดตั้ง.md หมวด 14 (ตาราง "บัญชีจุดที่ต้องกรอกเอง")
 */
-const API_URL = 'https://script.google.com/macros/s/AKfycbydKxpRgWhFxBgxT4Dfk-YMzaM8s_Gi797ylvabLSM-G5yQO57nith6VrCwQKqn9f80-w/exec';
+const API_URL = 'PASTE_WEBAPP_EXEC_URL_HERE';
 
 /* ============================================================
    0) ค่าคงที่ของหน้าเว็บ
@@ -298,6 +298,49 @@ function fmtDate(iso, withTime) {
   if (withTime) s += ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ' น.';
   return s;
 }
+/* ============================================================
+   ★ ชุด K (มติ EF-D90) — คำแปลไทยของ "ธงคุณภาพข้อมูล"
+   ------------------------------------------------------------
+   เหตุที่ต้องมี: คุณสุ่ยเห็นรหัส DATE_BE_INPUT ดิบ ๆ บนจอเมื่อ 8 ส.ค. 2569
+   แล้วเข้าใจว่าข้อมูลมีปัญหา ทั้งที่ระบบตีความ พ.ศ. ให้เรียบร้อยแล้ว
+   🔴 กติกาของมติ EF-D90 (ห้ามเปลี่ยนโดยไม่ถาม):
+     · แปล "เฉพาะฝั่งจอ" — หลังบ้านยังเขียนรหัสดิบลงชีตเหมือนเดิม
+     · ไฟล์ CSV ยังส่งออกรหัสดิบ (ค่าให้เครื่องอ่าน ≠ ค่าให้คนอ่าน · กับดักข้อ 41 · 44)
+     · แสดงเป็น "คำไทย (RHASDIB)" — ห้ามซ่อนรหัสทิ้ง คนที่ต้องค้นย้อนหลังยังต้องเห็น
+     · รหัสที่ไม่รู้จักต้องคืนตัวมันเองออกมา ห้ามกลืนหาย
+   ★ ธงพวกนี้ไม่ใช่ "ของเสีย" ทั้งหมด — DATE_BE_INPUT ระบบจัดการให้แล้วและ
+     Migration.gs ตั้งใจไม่นับเป็นรายการที่ต้องให้คนตัดสิน คำแปลจึงต้องสื่อแบบนั้น
+   ============================================================ */
+const DATA_FLAG_TH = {
+  DATE_BE_INPUT:       'วันที่กรอกเป็น พ.ศ. — ระบบตีความให้แล้ว',
+  FY_OUT_OF_RANGE:     'ปีงบประมาณอยู่นอกช่วงที่ตั้งไว้ — ต้องให้เจ้าหน้าที่ตรวจ',
+  DATE_INVALID:        'วันที่อ่านไม่ออก หรือวันสิ้นสุดมาก่อนวันเริ่ม — ต้องให้เจ้าหน้าที่ตรวจ',
+  BUDGET_SUM_MISMATCH: 'ยอดงบแยกหน่วยงานรวมไม่เท่างบรวมทั้งโครงการ — ต้องให้เจ้าหน้าที่ตรวจ'
+};
+/** รหัสธง 1 ตัว → "คำไทย (รหัส)" · รหัสที่ไม่รู้จักคืนตัวมันเอง (ห้ามกลืนข้อมูลหาย) */
+function dataFlagTh(code) {
+  const c = String(code || '').trim();
+  if (!c) return '';
+  return DATA_FLAG_TH[c] ? (DATA_FLAG_TH[c] + ' (' + c + ')') : c;
+}
+/** ธงหลายตัว (array) → ข้อความพร้อมแสดง · ผ่าน esc() ให้แล้ว */
+function dataFlagsTh(arr) {
+  return (arr || []).map(function (c) { return esc(dataFlagTh(c)); }).join(' · ');
+}
+/**
+ * แทนรหัสธงที่ฝังอยู่ใน "ข้อความที่ชีตเก็บไว้แล้ว" ด้วยคำไทย
+ * ใช้กับหมายเหตุของไทม์ไลน์/หน้าร่องรอย ที่หลังบ้านเขียนไว้เป็น "· ธง: DATE_BE_INPUT"
+ * ★ ไม่แตะข้อมูลต้นทาง — แปลตอนแสดงเท่านั้น จึงมีผลกับแถวเก่าที่มีอยู่แล้วด้วย
+ */
+function flagCodesInText(text) {
+  let s = String(text == null ? '' : text);
+  Object.keys(DATA_FLAG_TH).forEach(function (code) {
+    if (s.indexOf(code) < 0) return;
+    s = s.split(code).join(DATA_FLAG_TH[code] + ' (' + code + ')');
+  });
+  return s;
+}
+
 /** ISO string → ค่าใส่ <input type="date"> (yyyy-mm-dd ตามปฏิทิน ค.ศ. ที่เบราว์เซอร์ต้องการ) */
 function isoToDateInput(iso) {
   if (!iso) return '';
@@ -1889,7 +1932,7 @@ async function doSubmitRequest() {
 function formDoneV() {
   const r = FORM.result || {};
   const flags = (r.data_flags && r.data_flags.length)
-    ? '<div class="msg warn">ระบบติดหมายเหตุคุณภาพข้อมูลไว้: ' + r.data_flags.map(esc).join(' · ')
+    ? '<div class="msg warn">ระบบติดหมายเหตุคุณภาพข้อมูลไว้: ' + dataFlagsTh(r.data_flags)
       + ' — เจ้าหน้าที่จะตรวจสอบให้อีกครั้ง ไม่กระทบการรับคำขอ</div>' : '';
   const mail = r.mail_sent || {};
   return '<div class="panel statecard">'
@@ -2149,7 +2192,7 @@ function detailV() {
     + fmtMoney(p.budget_distribution_sum) + ' / ' + fmtMoney(p.total_budget) + ' บาท'
     + (p.budget_sum_matches ? ' ✓' : ' (ไม่ตรงกับงบรวม)') + '</span></div></div>'
     + ((p.data_flags && p.data_flags.length)
-        ? '<div class="msg warn">หมายเหตุคุณภาพข้อมูล: ' + p.data_flags.map(esc).join(' · ') + '</div>' : '')
+        ? '<div class="msg warn">หมายเหตุคุณภาพข้อมูล: ' + dataFlagsTh(p.data_flags) + '</div>' : '')
     + '</div>'
 
     + '<div class="panel" style="margin-bottom:14px"><h3 style="font-size:16px;margin-bottom:10px">3 · รายการธุรกรรมรายงวด ('
@@ -2852,7 +2895,7 @@ function staffDetailBodyHtml() {
     + fmtMoney(p.budget_distribution_sum) + ' / ' + fmtMoney(p.total_budget) + ' บาท'
     + (p.budget_sum_matches ? ' ✓' : ' (ไม่ตรงกับงบรวม)') + '</span></div></div>'
     + ((p.data_flags && p.data_flags.length)
-        ? '<div class="msg warn">หมายเหตุคุณภาพข้อมูล: ' + p.data_flags.map(esc).join(' · ') + '</div>' : '')
+        ? '<div class="msg warn">หมายเหตุคุณภาพข้อมูล: ' + dataFlagsTh(p.data_flags) + '</div>' : '')
 
     + '<h4 style="margin:14px 0 6px">3 · รายการธุรกรรมรายงวด</h4>'
     + (d.transactions || []).map(staffTxHtml).join('')
@@ -2896,7 +2939,10 @@ function staffHistoryHtml(d) {
       : '')
     + '<ul class="tl">'
     + rows.map(function (h) {
-        const detail = [h.from_value && h.to_value ? (h.from_value + ' → ' + h.to_value) : (h.to_value || ''), h.note]
+        // ★ ชุด K (EF-D90) — หมายเหตุที่หลังบ้านเขียนไว้มีรหัสธงดิบฝังอยู่ (เช่น "· ธง: DATE_BE_INPUT")
+        //   → แปลตอนแสดง จึงมีผลกับแถวเก่าที่มีอยู่แล้วด้วย โดยไม่แก้ข้อมูลต้นทาง
+        const detail = [h.from_value && h.to_value ? (h.from_value + ' → ' + h.to_value) : (h.to_value || ''),
+                        flagCodesInText(h.note)]
           .filter(function (x) { return x; }).join(' · ');
         // ★ ใช้ชั้นสไตล์เดียวกับไทม์ไลน์เดิม (.d / .tt / .tm) — ไม่แตะ styles.css เลย
         return '<li>'
@@ -3395,8 +3441,69 @@ const AUDIT_ACTION_TH = {
 };
 /* เหตุการณ์ที่ควรจับตาเป็นพิเศษ — ต่อยอดตรง ๆ กับ EF-S7 และ EF-S11 ที่ยังไม่ได้ทำ */
 const AUDIT_WATCH = ['OTP_REQUEST_NOT_STAFF', 'RECEIPT_MISSING', 'RECOVER_ID_NOT_FOUND', 'BACKUP_FAIL'];
+/* ★ ชุด K (EF-S28) — แถบ "สัญญาณที่ควรจับตา" นับเฉพาะกี่วันล่าสุด
+   เหตุ: 4 ส.ค. 2569 แถบยังเตือน "สำรองข้อมูลไม่สำเร็จ 2 ครั้ง" ของวันที่ 2 ส.ค.
+   ที่ HOTFIX ชุด A ปิดไปแล้วและหลังนั้นสำรองสำเร็จทุกครั้ง
+   → แถบที่ร้องเรื่องที่แก้แล้ว = แถบที่คนเลิกอ่าน */
+const AUDIT_WATCH_DAYS = 7;
 
 function auditActionTh(code) { return AUDIT_ACTION_TH[code] || code; }
+
+/**
+ * ★ ชุด K (EF-S28) — แยกสัญญาณที่ควรจับตาเป็น "ในหน้าต่างเวลา" กับ "เก่ากว่านั้น"
+ * @param {Array}  rows  แถวร่องรอยที่ดึงมา (ต้องมี action + timestamp เป็น ISO)
+ * @param {number} [nowMs] เวลาอ้างอิง — ★ ใส่ได้เพื่อให้ฉากทดสอบตรึงเวลาได้ (ไม่ต้องรอวันจริง)
+ * @returns {{recent:Array, oldCount:number, unknownCount:number, days:number}}
+ *   recent = [{action, count, latestMs}] เรียงจากมากไปน้อย
+ * 🔴 ห้ามกลืนของเก่าหายเงียบ — ต้องคืน oldCount ออกมาให้คนเห็นว่ายังมีอยู่
+ *    (กับดักข้อ 36: ตัวกรองที่ทำให้แถบหายสนิท จะทำให้คนเข้าใจว่าระบบเลิกเฝ้าดู)
+ */
+function auditWatchInfo(rows, nowMs) {
+  const now = (nowMs == null ? Date.now() : nowMs);
+  const cut = now - AUDIT_WATCH_DAYS * 86400000;
+  const cnt = {}, latest = {};
+  let oldCount = 0, unknownCount = 0;
+  (rows || []).forEach(function (r) {
+    const a = r && r.action;
+    if (!a || AUDIT_WATCH.indexOf(a) < 0) return;
+    const d = parseDateLoose(r.timestamp);
+    const t = d ? d.getTime() : NaN;
+    // 🔴 เวลาอ่านไม่ออก "หรือ" อยู่ในอนาคต = รายงานแยก ห้ามทิ้งและห้ามนับเป็นเรื่องสด
+    //   ที่มา (เจอตอนเขียนฉากทดสอบของชุด K นี้เอง): parseDateLoose รับค่าขยะอย่าง
+    //   "31/13/2569 99:99" แล้ว JavaScript ทดเดือน/ชั่วโมงล้นให้กลายเป็นวันจริงในอนาคต
+    //   → ถ้าไม่กัน แถวขยะ 1 แถวจะค้างอยู่ในแถบเตือนตลอดไป ซึ่งขัดกับเจตนาของ EF-S28 เอง
+    //   เผื่อนาฬิกาเครื่อง/เขตเวลาเหลื่อมกัน 1 วัน
+    if (isNaN(t) || t > now + 86400000) { unknownCount++; return; }
+    if (t < cut) { oldCount++; return; }
+    cnt[a] = (cnt[a] || 0) + 1;
+    if (!latest[a] || t > latest[a]) latest[a] = t;
+  });
+  const recent = Object.keys(cnt).map(function (a) {
+    return { action: a, count: cnt[a], latestMs: latest[a] };
+  }).sort(function (x, y) { return y.count - x.count || y.latestMs - x.latestMs; });
+  return { recent: recent, oldCount: oldCount, unknownCount: unknownCount, days: AUDIT_WATCH_DAYS };
+}
+
+/** ★ ชุด K (EF-S28) — ข้อความของแถบสัญญาณ (แยกออกมาเพื่อให้ฉากทดสอบเรียกตรงได้) */
+function auditWatchBarHtml(rows, nowMs) {
+  const w = auditWatchInfo(rows, nowMs);
+  const extra = (w.unknownCount ? ' · อ่านเวลาไม่ออกหรือเวลาผิดปกติ ' + w.unknownCount + ' รายการ' : '');
+  if (w.recent.length) {
+    const parts = w.recent.map(function (i) {
+      return auditActionTh(i.action) + ' ' + i.count + ' ครั้ง (ล่าสุด ' + fmtDate(new Date(i.latestMs).toISOString(), true) + ')';
+    });
+    return '<div class="msg warn">⚠️ <b>สัญญาณที่ควรจับตาใน ' + w.days + ' วันล่าสุด</b>: '
+      + esc(parts.join(' · '))
+      + (w.oldCount ? esc(' · (มีของเก่ากว่า ' + w.days + ' วันอีก ' + w.oldCount + ' รายการ)') : '')
+      + esc(extra) + '</div>';
+  }
+  if (w.oldCount || w.unknownCount) {
+    return '<div class="msg info">ℹ️ ไม่มีสัญญาณที่ควรจับตาใน ' + w.days + ' วันล่าสุด'
+      + esc(w.oldCount ? ' · มีของเก่ากว่านั้น ' + w.oldCount + ' รายการ (ดูในตารางข้างล่าง)' : '')
+      + esc(extra) + '</div>';
+  }
+  return '';
+}
 
 function auditV() {
   if (AUDIT.err) return errorCard(AUDIT.err, 'loadAudit()');
@@ -3415,9 +3522,6 @@ function auditV() {
         + esc(auditActionTh(a)) + ' (' + seen[a] + ')</option>';
     })).join('');
 
-  const watch = AUDIT_WATCH.filter(function (a) { return seen[a]; })
-    .map(function (a) { return auditActionTh(a) + ' ' + seen[a] + ' ครั้ง'; });
-
   const limOpts = [100, 200, 500].map(function (n) {
     return '<option value="' + n + '"' + (AUDIT.limit === n ? ' selected' : '') + '>ล่าสุด ' + n + ' รายการ</option>';
   }).join('');
@@ -3428,9 +3532,8 @@ function auditV() {
     + '<button class="btn ghost" onclick="reloadStaffPage()">↻ โหลดใหม่</button>'
     + '</div></div>'
 
-    + (watch.length
-        ? '<div class="msg warn">⚠️ <b>สัญญาณที่ควรจับตาในช่วงนี้</b>: ' + esc(watch.join(' · ')) + '</div>'
-        : '')
+    /* ★ ชุด K (EF-S28) — เดิมนับทุกแถวที่ดึงมาโดยไม่ดูวันที่เลย จึงเตือนเรื่องที่แก้ไปแล้วตลอดไป */
+    + auditWatchBarHtml(all)
 
     + '<div class="panel" style="margin-bottom:14px">'
     + '<div class="frow">'
@@ -3469,7 +3572,7 @@ function auditRowsHtml() {
           +   ((r.from_value || r.to_value)
                 ? '<div class="help">' + esc(r.from_value || '—') + ' → <b>' + esc(r.to_value || '—') + '</b></div>'
                 : '')
-          +   (r.note ? '<div class="help">' + esc(r.note) + '</div>' : '')
+          +   (r.note ? '<div class="help">' + esc(flagCodesInText(r.note)) + '</div>' : '')
           + '</div>'
           + '<div class="help">' + esc(r.actor_email || '(ระบบ)')
           +   (r.role ? '<br><span class="chip c-green">' + esc(r.role) + '</span>' : '') + '</div>'
