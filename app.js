@@ -32,7 +32,7 @@
    (ห้ามใช้ URL ที่ลงท้ายด้วย /dev — ตัวนั้นใช้ได้เฉพาะตอนที่ท่านล็อกอินบัญชีเจ้าของสคริปต์อยู่)
    ดูขั้นตอนใน README_Phase2_วิธีติดตั้ง.md หมวด 14 (ตาราง "บัญชีจุดที่ต้องกรอกเอง")
 */
-const API_URL = 'https://script.google.com/macros/s/AKfycbydKxpRgWhFxBgxT4Dfk-YMzaM8s_Gi797ylvabLSM-G5yQO57nith6VrCwQKqn9f80-w/exec';
+const API_URL = 'PASTE_WEBAPP_EXEC_URL_HERE';
 
 /* ============================================================
    0) ค่าคงที่ของหน้าเว็บ
@@ -41,8 +41,10 @@ const API_PLACEHOLDER = 'PASTE_WEBAPP_EXEC_URL_HERE';
 const API_TIMEOUT_MS  = 45000;        // ไฟล์แนบทำให้ช้ากว่าปกติ จึงเผื่อไว้ 45 วินาที
 /* ★ เฟส 3 เพิ่ม 3 หน้า: staff (เข้าสู่ระบบเจ้าหน้าที่) · admin (แดชบอร์ด) · assistant (คิวงาน)
    ★ ชุด B เพิ่ม 2 หน้าของ admin: staffreg (ทะเบียนเจ้าหน้าที่ · EF-S16) · audit (ร่องรอยการใช้งาน · EF-S17) */
+/* ★ ชุด L เพิ่ม 1 หน้า: stats (สถิติสาธารณะ · EF-S4)
+   🔴 หน้านี้ "ไม่มีแท็บ" โดยเจตนา (มติ EF-D95) — ทางเข้าอยู่ที่ลิงก์ท้ายเว็บและ ?page=stats เท่านั้น */
 const PAGES = ['home', 'form', 'track', 'detail', 'evaluate', 'recover',
-               'staff', 'admin', 'assistant', 'staffreg', 'audit'];
+               'staff', 'admin', 'assistant', 'staffreg', 'audit', 'stats'];
 const TABS = [
   { id: 'home',  t: 'หน้าหลัก' },
   { id: 'form',  t: '📝 ยื่นคำขอ', cta: 1 },
@@ -627,6 +629,12 @@ function buildBars() {
     if (CFG.contact_phone) c.push('โทร ' + CFG.contact_phone);
     if (CFG.contact_email) c.push(CFG.contact_email);
     if (c.length) $('footContact').textContent = c.join(' · ');
+    /* ★ ชุด L (EF-S4 · มติ EF-D94): ลิงก์สถิติโผล่เฉพาะตอนผู้ดูแลเปิดคีย์ในชีตแล้ว
+       ★ นี่คือชั้น "ความสวยงาม" เท่านั้น — ตัวกันจริงอยู่ที่ประตู publicStats ฝั่งเซิร์ฟเวอร์
+         คนที่พิมพ์ ?page=stats เข้ามาตรง ๆ ตอนที่ยังปิดอยู่ จะเห็นข้อความบอกว่ายังไม่เปิด
+         ซึ่งเป็นคำตอบที่หลังบ้านส่งมา ไม่ใช่หน้าเว็บเดาเอง (กับดักข้อ 24) */
+    const sl = $('statsLink');
+    if (sl) sl.style.display = (CFG.public_stats_enabled === true) ? '' : 'none';
   }
 }
 
@@ -688,6 +696,7 @@ function render() {
   else if (S.page === 'assistant')  st.innerHTML = assistantV();
   else if (S.page === 'staffreg')   st.innerHTML = staffRegV();
   else if (S.page === 'audit')      st.innerHTML = auditV();
+  else if (S.page === 'stats')      st.innerHTML = statsV();     // ★ ชุด L (EF-S4)
   else                              st.innerHTML = homeV();
   window.scrollTo(0, 0);
 
@@ -700,6 +709,7 @@ function render() {
   if (S.page === 'assistant') assistantAfter();
   if (S.page === 'staffreg')  staffRegAfter();
   if (S.page === 'audit')     auditAfter();
+  if (S.page === 'stats')     statsAfter();   // ★ ชุด L (EF-S4)
 }
 
 /* ============================================================
@@ -3602,6 +3612,101 @@ async function loadAudit() {
     }
   }
   AUDIT.loading = false;
+  render();
+}
+
+/* ============================================================
+   11.5) ★ ชุด L — หน้าสถิติสาธารณะ (EF-S4 · มติ EF-D94 · EF-D95 · EF-D96)
+   ------------------------------------------------------------
+   🔴 หน้านี้เป็นหน้าเดียวของทั้งเว็บที่เปิดดูได้โดยไม่ต้องยืนยันตัวตนเลย
+      · ไม่ส่ง token ไปกับคำขอ (ไม่มี token ให้ส่งอยู่แล้ว)
+      · ตัวเลขทุกตัวมาจากหลังบ้าน ไม่มีการคำนวณเองบนหน้าเว็บ
+        (ถ้าคำนวณเองจะกลายเป็นสูตรชุดที่สองทันที — บทเรียน EF-D63)
+      · หลังบ้านไม่ส่งชื่อ อีเมล ชื่อโครงการ ยอดเงิน หรือการแยกหน่วยงานมาเลย (มติ EF-D96)
+        หน้านี้จึงไม่มีทางแสดงข้อมูลส่วนบุคคลได้แม้จะเขียนโค้ดผิด
+   ============================================================ */
+const STATS = { data: null, err: '', closed: false, loading: false };
+
+function statsAfter() {
+  if (!STATS.data && !STATS.err && !STATS.closed && !STATS.loading) loadStats();
+}
+
+async function loadStats() {
+  if (STATS.loading) return;
+  STATS.loading = true; STATS.err = ''; STATS.closed = false;
+  try {
+    STATS.data = await api('publicStats', {});
+  } catch (err) {
+    /* ★ ปิดอยู่ ไม่ใช่ "พัง" — ต้องเล่าคนละเรื่องกัน
+       ผู้ใช้ที่เปิดลิงก์เก่ามาเจอหน้าจอแดง ๆ ว่า "ผิดพลาด" จะคิดว่าระบบล่มทั้งระบบ */
+    if (err.error === 'FORBIDDEN') { STATS.closed = true; STATS.data = null; }
+    else STATS.err = err.msg || 'โหลดข้อมูลสถิติไม่สำเร็จ';
+  }
+  STATS.loading = false;
+  render();
+}
+
+function statsV() {
+  if (STATS.closed) {
+    return '<div class="sec-head"><h2>📊 สถิติการให้บริการ</h2></div>'
+      + '<div class="panel"><div class="msg info">ℹ️ ขณะนี้ยังไม่เปิดให้ดูหน้าสถิติสาธารณะ</div>'
+      + '<p class="cardp">ผู้ดูแลระบบเป็นผู้เปิด-ปิดหน้านี้ · เมื่อเปิดแล้วหน้านี้จะแสดง'
+      + 'เฉพาะตัวเลขรวมของปีงบประมาณปัจจุบัน</p>'
+      + '<div style="margin-top:10px"><button class="btn primary" data-page="home">← กลับหน้าหลัก</button></div>'
+      + '</div>';
+  }
+  if (STATS.err) return errorCard(STATS.err, 'loadStats()');
+  if (!STATS.data) return loadingCard('กำลังรวบรวมตัวเลขสถิติ...');
+
+  const d = STATS.data;
+  const ev = d.evaluation || { count: 0, avg: 0, avg_speed: 0, avg_system: 0 };
+
+  /* ★ เรียงสถานะตามลำดับจริงของระบบที่ config ส่งมา ไม่ใช่ตามลำดับคีย์ที่ JSON บังเอิญเรียงให้
+     🔴 กับดักข้อ 25/30 ตระกูลเดียวกัน: ลำดับที่คนอ่านเห็นต้องเป็นลำดับของงานจริง */
+  const order = (CFG && CFG.status_all && CFG.status_all.length) ? CFG.status_all : Object.keys(d.by_status || {});
+  /* ★ ใช้โครง .dtrow เดิมของหน้าร่องรอย — ไม่เพิ่มคลาสใหม่และ **ไม่แตะ styles.css เลย**
+     (ทั้งเว็บนี้ไม่มี <table> อยู่เลยแม้แต่ตัวเดียว การเพิ่มตารางจึงต้องเพิ่ม CSS ตามมาด้วย) */
+  const stRows = order.map(function (s) {
+    const n = Number((d.by_status || {})[s] || 0);
+    return '<div class="dtrow" style="grid-template-columns:1fr auto">'
+      + '<div>' + esc(s) + '</div>'
+      + '<div><b>' + n.toLocaleString('th-TH') + '</b> งวด</div></div>';
+  }).join('');
+
+  return '<div class="sec-head"><h2>📊 สถิติการให้บริการ · ปีงบประมาณ พ.ศ. ' + esc(String(d.fiscal_year)) + '</h2>'
+    + '<button class="btn ghost" onclick="reloadStats()">↻ โหลดใหม่</button></div>'
+
+    + '<div class="msg info" style="margin-bottom:12px">ℹ️ หน้านี้แสดง<b>เฉพาะตัวเลขรวม</b>ของปีงบประมาณปัจจุบัน '
+    + 'ไม่มีชื่อผู้ขอรับบริการ ไม่มีอีเมล ไม่มีชื่อโครงการ และไม่มีจำนวนเงิน</div>'
+
+    + '<div class="grid g4" style="margin-bottom:14px">'
+    + statCard('คำขอทั้งหมด', Number(d.total_requests || 0), 'ใบ')
+    + statCard('โครงการไม่ซ้ำ', Number(d.unique_projects || 0), 'โครงการ')
+    + statCard('งวดเงินทั้งหมด', Number(d.transactions || 0), 'งวด')
+    + statCard('ดำเนินการเสร็จสิ้น', Number(d.done || 0), 'คิดเป็น ' + Number(d.done_rate || 0) + '% ของงวดทั้งหมด')
+    + '</div>'
+
+    + '<div class="grid g2">'
+    + '<div class="panel"><h3 class="cardh">สถานะของงานทั้งหมด</h3>' + stRows + '</div>'
+
+    + '<div class="panel"><h3 class="cardh">ความพึงพอใจของผู้รับบริการ</h3>'
+    + (ev.count
+        ? '<div class="grid g2">'
+          + statCard('ความรวดเร็ว', Number(ev.avg_speed), 'เต็ม 5 คะแนน')
+          + statCard('ระบบใช้งาน', Number(ev.avg_system), 'เต็ม 5 คะแนน')
+          + '</div><p class="cardp">จากแบบประเมิน ' + Number(ev.count).toLocaleString('th-TH')
+          + ' ใบ · คะแนนเฉลี่ยรวม ' + Number(ev.avg) + ' เต็ม 5</p>'
+        : '<p class="cardp">ยังไม่มีผู้ทำแบบประเมินในปีงบประมาณนี้</p>')
+    + '</div></div>'
+
+    + '<p class="help" style="margin-top:12px">ข้อมูล ณ ' + fmtDate(d.generated_at, true)
+    + ' · ระบบเก็บผลไว้ชั่วคราวประมาณ 5 นาที ตัวเลขจึงอาจช้ากว่าของจริงเล็กน้อย</p>'
+    + '<div style="margin-top:12px"><button class="btn ghost" data-page="home">← กลับหน้าหลัก</button></div>';
+}
+
+/** ↻ โหลดใหม่ — ล้างของเดิมทิ้งก่อน ไม่งั้น statsAfter() จะเห็นว่ามีข้อมูลอยู่แล้วแล้วไม่ยิงซ้ำ */
+function reloadStats() {
+  STATS.data = null; STATS.err = ''; STATS.closed = false;
   render();
 }
 
