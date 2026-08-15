@@ -1,11 +1,11 @@
-/* ============================================================
-   SRDI External Fund 2.0 — styles.css (ด่าน 2.4 · หน้าเว็บสาธารณะ)
-   ธีม STAR · ยกมาจาก production ของ SRDI-Service Mind ตามมติ EF-D5 / EF-D7
-   ★ design tokens (สี/ฟอนต์/มุมโค้ง) ล็อกตามมติ SM-D26 — ห้ามเปลี่ยนค่า
-     ส่วนที่เพิ่มของ External Fund อยู่ท้ายไฟล์ และใช้ตัวแปรเดิมทั้งหมด
+﻿/* ============================================================
+   SRDI External Fund 2.0 โ€” styles.css (เธ”เนเธฒเธ 2.4 ยท เธซเธเนเธฒเน€เธงเนเธเธชเธฒเธเธฒเธฃเธ“เธฐ)
+   เธเธตเธก STAR ยท เธขเธเธกเธฒเธเธฒเธ production เธเธญเธ SRDI-Service Mind เธ•เธฒเธกเธกเธ•เธด EF-D5 / EF-D7
+   โ… design tokens (เธชเธต/เธเธญเธเธ•เน/เธกเธธเธกเนเธเนเธ) เธฅเนเธญเธเธ•เธฒเธกเธกเธ•เธด SM-D26 โ€” เธซเนเธฒเธกเน€เธเธฅเธตเนเธขเธเธเนเธฒ
+     เธชเนเธงเธเธ—เธตเนเน€เธเธดเนเธกเธเธญเธ External Fund เธญเธขเธนเนเธ—เนเธฒเธขเนเธเธฅเน เนเธฅเธฐเนเธเนเธ•เธฑเธงเนเธเธฃเน€เธ”เธดเธกเธ—เธฑเนเธเธซเธกเธ”
    ============================================================ */
 
-/* ---- ตัวแปรสี/เงา/มุม (โหมดสว่าง) ---- */
+/* ---- เธ•เธฑเธงเนเธเธฃเธชเธต/เน€เธเธฒ/เธกเธธเธก (เนเธซเธกเธ”เธชเธงเนเธฒเธ) ---- */
 :root{
   --green:#1d7a4f;--green2:#2e9e6b;--green-hi:#1d7a4f;--greens:#e4f4ec;--greens-line:#cbe7d8;
   --body-bg:#faf8f3;--panel:#ffffff;--panel2:#f6f4ee;--ink:#222831;--ink2:#5d6673;--ink3:#7da78c;
@@ -16,7 +16,7 @@
   --tabs-bg:rgba(34,40,49,.06);--tab-active-bg:#222831;--tab-active-tx:#ffffff;--tab-tx:#5d6673;
   --r:16px;--sh:0 2px 10px rgba(60,54,40,.06);--sh2:0 8px 26px rgba(60,54,40,.10);
 }
-/* ---- โหมดมืด ---- */
+/* ---- เนเธซเธกเธ”เธกเธทเธ” ---- */
 html[data-theme="dark"]{
   --green:#b8f09e;--green2:#4ade80;--green-hi:#b8f09e;--greens:rgba(184,240,158,.12);--greens-line:rgba(184,240,158,.34);
   --body-bg:#0d1f12;--panel:#12301c;--panel2:rgba(255,255,255,.07);--ink:#eaf5ec;--ink2:#a9c9b4;--ink3:#7da78c;
@@ -32,12 +32,12 @@ a{color:var(--green);text-decoration:none}
 a:hover{text-decoration:underline}
 .wrap{max-width:1120px;margin:0 auto;padding:0 22px}
 
-/* ---- ★ ชุด B (มติ EF-D69): กล่องที่ค้างบนจอ = แถบเตือน 2 ชั้น + แถบบน รวมเป็นก้อนเดียว ----
-   🔴 sticky อยู่ที่กล่องนี้ที่เดียว — ห้ามใส่ position:sticky ให้ .topbar อีก (sticky ซ้อน sticky = เพี้ยน)
-   กล่องนี้ไม่มีพื้นหลัง/ขอบของตัวเอง จึงไม่กินพื้นที่เลยเมื่อไม่มีแถบเตือนขึ้น (แถบเป็น display:none) */
+/* ---- โ… เธเธธเธ” B (เธกเธ•เธด EF-D69): เธเธฅเนเธญเธเธ—เธตเนเธเนเธฒเธเธเธเธเธญ = เนเธ–เธเน€เธ•เธทเธญเธ 2 เธเธฑเนเธ + เนเธ–เธเธเธ เธฃเธงเธกเน€เธเนเธเธเนเธญเธเน€เธ”เธตเธขเธง ----
+   ๐”ด sticky เธญเธขเธนเนเธ—เธตเนเธเธฅเนเธญเธเธเธตเนเธ—เธตเนเน€เธ”เธตเธขเธง โ€” เธซเนเธฒเธกเนเธชเน position:sticky เนเธซเน .topbar เธญเธตเธ (sticky เธเนเธญเธ sticky = เน€เธเธตเนเธขเธ)
+   เธเธฅเนเธญเธเธเธตเนเนเธกเนเธกเธตเธเธทเนเธเธซเธฅเธฑเธ/เธเธญเธเธเธญเธเธ•เธฑเธงเน€เธญเธ เธเธถเธเนเธกเนเธเธดเธเธเธทเนเธเธ—เธตเนเน€เธฅเธขเน€เธกเธทเนเธญเนเธกเนเธกเธตเนเธ–เธเน€เธ•เธทเธญเธเธเธถเนเธ (เนเธ–เธเน€เธเนเธ display:none) */
 #stickyTop{position:sticky;top:0;z-index:40}
 
-/* ---- แถบบน (topbar สีอ่อน ครีม) + โลโก้จริง ---- */
+/* ---- เนเธ–เธเธเธ (topbar เธชเธตเธญเนเธญเธ เธเธฃเธตเธก) + เนเธฅเนเธเนเธเธฃเธดเธ ---- */
 .topbar{background:var(--body-bg);border-bottom:1px solid var(--line)}
 .topbar .wrap{display:flex;align-items:center;gap:14px;padding:13px 22px}
 .brand{display:flex;align-items:center;gap:12px;cursor:pointer;background:none;border:0;padding:0;text-align:left}
@@ -45,23 +45,23 @@ a:hover{text-decoration:underline}
 .btxt b{color:var(--ink);font-family:'Prompt';font-weight:800;font-size:19px;display:block;line-height:1.1}
 .btxt span{color:var(--ink3);font-size:11.5px}
 .spacer{flex:1}
-/* ★ มติ EF-D78 (4 ส.ค. 2569): แถบเมนู "ห้ามตกบรรทัด" ทุกขนาดจอ ไม่ใช่แค่จอแคบ
-   🔴 ที่มา: ชุด B แก้เรื่องนี้ไว้แล้วแต่ **ใส่ไว้ใน @media(max-width:820px) เท่านั้น** (ดูท้ายไฟล์)
-      เดสก์ท็อปจึงยังเป็น flex-wrap:wrap → วัดของจริงบนจอคุณสุ่ยแล้วพบว่า admin ตกเป็น 2 บรรทัด
-      แถวแท็บต้องใช้ 706px แต่ได้พื้นที่ 704px = **ขาดแค่ 2 พิกเซล** (1920px และ 1280px ตกเหมือนกัน)
-   ★ วัดแล้ว: 2 บรรทัด 153px (19.1% ของจอ 800px) → 1 บรรทัด 123px (15.4%) · มือถือไม่เปลี่ยนเลย
-   ★ nowrap คือเกราะถาวร — เพิ่มแท็บอีกกี่อันหัวเว็บก็สูงเท่าเดิม ไม่ต้องมาไล่วัดใหม่ทุกครั้ง
-   ★ gap 3px → 2px เพื่อให้ชุดแท็บวันนี้ "ไม่ล้นเลย" จะได้ไม่มีแถบเลื่อนโผล่มาให้เห็น
-   ★ ไม่แตะสี ฟอนต์ หรือถ้อยคำใด ๆ — เปลี่ยนเฉพาะการจัดวาง (ไม่ขัด EF-D5 · SM-D26) */
+/* โ… เธกเธ•เธด EF-D78 (4 เธช.เธ. 2569): เนเธ–เธเน€เธกเธเธน "เธซเนเธฒเธกเธ•เธเธเธฃเธฃเธ—เธฑเธ”" เธ—เธธเธเธเธเธฒเธ”เธเธญ เนเธกเนเนเธเนเนเธเนเธเธญเนเธเธ
+   ๐”ด เธ—เธตเนเธกเธฒ: เธเธธเธ” B เนเธเนเน€เธฃเธทเนเธญเธเธเธตเนเนเธงเนเนเธฅเนเธงเนเธ•เน **เนเธชเนเนเธงเนเนเธ @media(max-width:820px) เน€เธ—เนเธฒเธเธฑเนเธ** (เธ”เธนเธ—เนเธฒเธขเนเธเธฅเน)
+      เน€เธ”เธชเธเนเธ—เนเธญเธเธเธถเธเธขเธฑเธเน€เธเนเธ flex-wrap:wrap โ’ เธงเธฑเธ”เธเธญเธเธเธฃเธดเธเธเธเธเธญเธเธธเธ“เธชเธธเนเธขเนเธฅเนเธงเธเธเธงเนเธฒ admin เธ•เธเน€เธเนเธ 2 เธเธฃเธฃเธ—เธฑเธ”
+      เนเธ–เธงเนเธ—เนเธเธ•เนเธญเธเนเธเน 706px เนเธ•เนเนเธ”เนเธเธทเนเธเธ—เธตเน 704px = **เธเธฒเธ”เนเธเน 2 เธเธดเธเน€เธเธฅ** (1920px เนเธฅเธฐ 1280px เธ•เธเน€เธซเธกเธทเธญเธเธเธฑเธ)
+   โ… เธงเธฑเธ”เนเธฅเนเธง: 2 เธเธฃเธฃเธ—เธฑเธ” 153px (19.1% เธเธญเธเธเธญ 800px) โ’ 1 เธเธฃเธฃเธ—เธฑเธ” 123px (15.4%) ยท เธกเธทเธญเธ–เธทเธญเนเธกเนเน€เธเธฅเธตเนเธขเธเน€เธฅเธข
+   โ… nowrap เธเธทเธญเน€เธเธฃเธฒเธฐเธ–เธฒเธงเธฃ โ€” เน€เธเธดเนเธกเนเธ—เนเธเธญเธตเธเธเธตเนเธญเธฑเธเธซเธฑเธงเน€เธงเนเธเธเนเธชเธนเธเน€เธ—เนเธฒเน€เธ”เธดเธก เนเธกเนเธ•เนเธญเธเธกเธฒเนเธฅเนเธงเธฑเธ”เนเธซเธกเนเธ—เธธเธเธเธฃเธฑเนเธ
+   โ… gap 3px โ’ 2px เน€เธเธทเนเธญเนเธซเนเธเธธเธ”เนเธ—เนเธเธงเธฑเธเธเธตเน "เนเธกเนเธฅเนเธเน€เธฅเธข" เธเธฐเนเธ”เนเนเธกเนเธกเธตเนเธ–เธเน€เธฅเธทเนเธญเธเนเธเธฅเนเธกเธฒเนเธซเนเน€เธซเนเธ
+   โ… เนเธกเนเนเธ•เธฐเธชเธต เธเธญเธเธ•เน เธซเธฃเธทเธญเธ–เนเธญเธขเธเธณเนเธ” เน โ€” เน€เธเธฅเธตเนเธขเธเน€เธเธเธฒเธฐเธเธฒเธฃเธเธฑเธ”เธงเธฒเธ (เนเธกเนเธเธฑเธ” EF-D5 ยท SM-D26) */
 .tabs{display:flex;align-items:center;gap:2px;background:var(--tabs-bg);padding:5px;border-radius:14px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
-/* ★ EF-D78 ข้อ ⑤: ป้ายแท็บ "ห้ามแตกบรรทัดในตัวปุ่ม"
-   🔴 ที่มา: วัดบนเว็บจริงหลัง deploy พบว่าแถวแท็บเป็นบรรทัดเดียวแล้วจริง แต่ทุกปุ่มสูง 56px
-      เพราะ flex บีบปุ่มให้แคบกว่าข้อความ → ภาษาไทยแตกกลางคำ ("แดช/บอร์ด" · "เจ้า/หน้าที่")
-      ★ ตัวเลขที่วัดจากไฟล์ในเครื่องไม่เห็นอาการนี้ เพราะ loadConfig() ยิงไม่ได้ ชื่อรองจึงสั้นกว่าของจริง
-        (ของจริงดึงจากชีต ยาวกว่า → บล็อกโลโก้กว้าง 383px แถวแท็บจึงเหลือที่แค่ 665px)
-   ★ nowrap ทำให้ min-content = max-content ปุ่มจึงถูกบีบให้แคบกว่าข้อความไม่ได้อีก
-      วัดแล้ว: ปุ่มสูง 56px → 37px ทุกปุ่ม · หัวเว็บ 93px → 84px (7.8% ของจอ 1080px)
-   ★ ไม่แตะสี ฟอนต์ หรือถ้อยคำ (ไม่ขัด EF-D5 · SM-D26) */
+/* โ… EF-D78 เธเนเธญ โ‘ค: เธเนเธฒเธขเนเธ—เนเธ "เธซเนเธฒเธกเนเธ•เธเธเธฃเธฃเธ—เธฑเธ”เนเธเธ•เธฑเธงเธเธธเนเธก"
+   ๐”ด เธ—เธตเนเธกเธฒ: เธงเธฑเธ”เธเธเน€เธงเนเธเธเธฃเธดเธเธซเธฅเธฑเธ deploy เธเธเธงเนเธฒเนเธ–เธงเนเธ—เนเธเน€เธเนเธเธเธฃเธฃเธ—เธฑเธ”เน€เธ”เธตเธขเธงเนเธฅเนเธงเธเธฃเธดเธ เนเธ•เนเธ—เธธเธเธเธธเนเธกเธชเธนเธ 56px
+      เน€เธเธฃเธฒเธฐ flex เธเธตเธเธเธธเนเธกเนเธซเนเนเธเธเธเธงเนเธฒเธเนเธญเธเธงเธฒเธก โ’ เธ เธฒเธฉเธฒเนเธ—เธขเนเธ•เธเธเธฅเธฒเธเธเธณ ("เนเธ”เธ/เธเธญเธฃเนเธ”" ยท "เน€เธเนเธฒ/เธซเธเนเธฒเธ—เธตเน")
+      โ… เธ•เธฑเธงเน€เธฅเธเธ—เธตเนเธงเธฑเธ”เธเธฒเธเนเธเธฅเนเนเธเน€เธเธฃเธทเนเธญเธเนเธกเนเน€เธซเนเธเธญเธฒเธเธฒเธฃเธเธตเน เน€เธเธฃเธฒเธฐ loadConfig() เธขเธดเธเนเธกเนเนเธ”เน เธเธทเนเธญเธฃเธญเธเธเธถเธเธชเธฑเนเธเธเธงเนเธฒเธเธญเธเธเธฃเธดเธ
+        (เธเธญเธเธเธฃเธดเธเธ”เธถเธเธเธฒเธเธเธตเธ• เธขเธฒเธงเธเธงเนเธฒ โ’ เธเธฅเนเธญเธเนเธฅเนเธเนเธเธงเนเธฒเธ 383px เนเธ–เธงเนเธ—เนเธเธเธถเธเน€เธซเธฅเธทเธญเธ—เธตเนเนเธเน 665px)
+   โ… nowrap เธ—เธณเนเธซเน min-content = max-content เธเธธเนเธกเธเธถเธเธ–เธนเธเธเธตเธเนเธซเนเนเธเธเธเธงเนเธฒเธเนเธญเธเธงเธฒเธกเนเธกเนเนเธ”เนเธญเธตเธ
+      เธงเธฑเธ”เนเธฅเนเธง: เธเธธเนเธกเธชเธนเธ 56px โ’ 37px เธ—เธธเธเธเธธเนเธก ยท เธซเธฑเธงเน€เธงเนเธ 93px โ’ 84px (7.8% เธเธญเธเธเธญ 1080px)
+   โ… เนเธกเนเนเธ•เธฐเธชเธต เธเธญเธเธ•เน เธซเธฃเธทเธญเธ–เนเธญเธขเธเธณ (เนเธกเนเธเธฑเธ” EF-D5 ยท SM-D26) */
 .tab{border:0;background:transparent;color:var(--tab-tx);font-family:'Prompt';font-weight:600;font-size:13px;padding:9px 14px;border-radius:10px;cursor:pointer;transition:.15s;white-space:nowrap}
 .tab:hover{color:var(--ink)}
 .tab.active{background:var(--tab-active-bg);color:var(--tab-active-tx);box-shadow:0 4px 14px rgba(0,0,0,.15)}
@@ -69,7 +69,7 @@ a:hover{text-decoration:underline}
 .tab.cta.active{color:#fff}
 .tab.mode{font-size:15px;padding:9px 11px}
 
-/* ---- แถบผู้ใช้ ---- */
+/* ---- เนเธ–เธเธเธนเนเนเธเน ---- */
 .userbar{background:var(--panel);border-bottom:1px solid var(--line)}
 .userbar .wrap{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 22px;flex-wrap:wrap}
 .who{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--ink2);flex-wrap:wrap}
@@ -78,7 +78,7 @@ a:hover{text-decoration:underline}
 .linkbtn{background:transparent;border:1px solid var(--line);color:var(--ink2);padding:5px 12px;border-radius:9px;cursor:pointer;font-size:12.5px;font-family:inherit}
 .linkbtn:hover{color:var(--green);border-color:var(--green2)}
 
-/* ---- แบนเนอร์แจ้งเตือนระดับหน้า (เช่น ยังไม่ตั้ง API_URL) ---- */
+/* ---- เนเธเธเน€เธเธญเธฃเนเนเธเนเธเน€เธ•เธทเธญเธเธฃเธฐเธ”เธฑเธเธซเธเนเธฒ (เน€เธเนเธ เธขเธฑเธเนเธกเนเธ•เธฑเนเธ API_URL) ---- */
 .app-banner{background:var(--ambers);color:var(--amber-tx);border-bottom:1px solid var(--greens-line);font-size:13px;font-weight:600;text-align:center;padding:9px 16px}
 .app-banner.err{background:var(--pinks);color:var(--red)}
 
@@ -87,12 +87,12 @@ main{padding:26px 0 130px}
 .sec-head h2{font-size:21px;font-weight:700}.sec-head h2 b{color:var(--green)}
 .sec-head .rt{font-size:12.5px;color:var(--ink3)}
 
-/* ---- การ์ด ---- */
+/* ---- เธเธฒเธฃเนเธ” ---- */
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);padding:20px}
 .panel.lift{transition:.18s}.panel.lift:hover{transform:translateY(-3px);border-color:var(--green2);box-shadow:var(--sh2)}
 .grid{display:grid;gap:14px}.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
 
-/* ---- hero (หน้าแรก) ---- */
+/* ---- hero (เธซเธเนเธฒเนเธฃเธ) ---- */
 .hero{display:grid;grid-template-columns:1.12fr .88fr;gap:30px;align-items:center;margin-bottom:30px}
 @media(max-width:820px){.g2,.g3,.g4,.hero{grid-template-columns:1fr}.hero{gap:20px}}
 .fy-badge{display:inline-flex;align-items:center;gap:8px;background:var(--greens);color:var(--green);border:1px solid var(--greens-line);padding:7px 15px;border-radius:999px;font-size:13px;font-weight:600}
@@ -127,7 +127,7 @@ main{padding:26px 0 130px}
 .pri{width:11px;height:11px;border-radius:50%;display:inline-block;vertical-align:middle}
 .pri-red{background:var(--heat-bad)}.pri-yellow{background:var(--heat-warn)}.pri-green{background:var(--heat-ok)}.pri-none{background:#ccc6b6}
 
-/* ---- ปุ่ม ---- */
+/* ---- เธเธธเนเธก ---- */
 .btn{font-family:'Prompt';font-weight:600;border:1px solid transparent;border-radius:11px;padding:11px 20px;cursor:pointer;font-size:14px;transition:.16s;line-height:1.2}
 .btn.primary{background:linear-gradient(135deg,#2e9e6b,#1d7a4f);color:#fff;box-shadow:0 6px 18px rgba(29,122,79,.28)}
 .btn.primary:hover{transform:translateY(-2px)}
@@ -136,7 +136,7 @@ main{padding:26px 0 130px}
 .btn.big{font-size:15px;padding:13px 24px}.btn.sm{padding:7px 13px;font-size:13px}
 .btn:disabled{opacity:.55;cursor:not-allowed;transform:none!important}
 
-/* ---- ฟอร์ม ---- */
+/* ---- เธเธญเธฃเนเธก ---- */
 .field{margin-bottom:14px}
 label.fl{display:block;font-weight:600;font-size:13.5px;margin-bottom:5px}.req{color:var(--red)}
 input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:11px;font-family:inherit;font-size:14px;background:var(--panel);color:var(--ink)}
@@ -150,7 +150,7 @@ textarea{min-height:88px;resize:vertical}
 .segbtns .sb{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:6px 13px;font-size:13px;cursor:pointer;color:var(--ink);font-family:inherit}
 .segbtns .sb.on{background:var(--greens);border-color:var(--greens-line);color:var(--green);font-weight:600}
 
-/* ---- อัปโหลดไฟล์ (ลากวาง) ---- */
+/* ---- เธญเธฑเธเนเธซเธฅเธ”เนเธเธฅเน (เธฅเธฒเธเธงเธฒเธ) ---- */
 .upzone{border:2px dashed var(--greens-line);border-radius:var(--r);padding:22px;text-align:center;color:var(--ink3);background:var(--greens);cursor:pointer;transition:.15s}
 .upzone:hover,.upzone.drag{border-color:var(--green);color:var(--green)}
 .fileitem{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:8px 12px;margin-top:8px;font-size:13px}
@@ -169,7 +169,7 @@ textarea{min-height:88px;resize:vertical}
 html[data-theme=dark] .pbar i{background:linear-gradient(90deg,#b8f09e,#4ade80)}
 .wl{display:flex;align-items:center;gap:10px;margin:9px 0}.wl .nm{width:78px;font-size:13px;font-weight:600}.wl .cnt{width:30px;text-align:right;font-weight:700;color:var(--green)}
 
-/* ---- แถว/รายการ ---- */
+/* ---- เนเธ–เธง/เธฃเธฒเธขเธเธฒเธฃ ---- */
 .task{padding:15px 18px;margin-bottom:10px;display:flex;gap:14px;align-items:flex-start}
 .task .nm{font-size:14px;font-weight:600}.task .mt{font-size:11.5px;color:var(--ink3);margin-top:3px}
 .task .side{margin-left:auto;display:flex;flex-direction:column;gap:7px;align-items:flex-end}
@@ -178,14 +178,14 @@ html[data-theme=dark] .pbar i{background:linear-gradient(90deg,#b8f09e,#4ade80)}
 .rrow{display:flex;justify-content:space-between;gap:14px;padding:9px 0;border-bottom:1px dashed var(--line);font-size:13.5px}
 .rrow:last-child{border:none}.rrow span{color:var(--ink3)}
 
-/* ---- timeline (ประวัติการดำเนินการ) ---- */
+/* ---- timeline (เธเธฃเธฐเธงเธฑเธ•เธดเธเธฒเธฃเธ”เธณเน€เธเธดเธเธเธฒเธฃ) ---- */
 .tl{list-style:none;margin:0;padding:0}
 .tl li{position:relative;padding:0 0 18px 26px;border-left:2px solid var(--line)}.tl li:last-child{border-left-color:transparent}
 .tl .d{position:absolute;left:-8px;top:2px;width:14px;height:14px;border-radius:50%;border:3px solid var(--panel)}
 .tl .tt{font-weight:600;font-size:13.5px}.tl .tm{color:var(--ink3);font-size:12px}
 .g{background:#9aa4ab}.bl{background:var(--blue-tx)}.am{background:var(--amber-tx)}.pu{background:var(--purple-tx)}.rd{background:var(--red)}.gn{background:var(--green)}
 
-/* ---- ข้อความแจ้ง (banner ในเนื้อหา) ---- */
+/* ---- เธเนเธญเธเธงเธฒเธกเนเธเนเธ (banner เนเธเน€เธเธทเนเธญเธซเธฒ) ---- */
 .msg{border-radius:12px;padding:11px 14px;font-size:13px;margin:12px 0;border:1px solid transparent}
 .msg.info{background:var(--blues);color:var(--blue-tx)}.msg.warn{background:var(--ambers);color:var(--amber-tx)}.msg.err{background:var(--pinks);color:var(--red)}.msg.ok{background:var(--greens);color:var(--green)}
 
@@ -194,7 +194,7 @@ html[data-theme=dark] .pbar i{background:linear-gradient(90deg,#b8f09e,#4ade80)}
 .steps .s{flex:1;text-align:center;font-size:12px;color:var(--ink3);padding-bottom:8px;border-bottom:3px solid var(--line);font-weight:600}
 .steps .s.on{color:var(--green);border-color:var(--green)}.steps .s.done{color:var(--green2);border-color:var(--green2)}
 
-/* ---- state cards (ว่าง/ผิดพลาด/โหลด) ---- */
+/* ---- state cards (เธงเนเธฒเธ/เธเธดเธ”เธเธฅเธฒเธ”/เนเธซเธฅเธ”) ---- */
 .statecard{text-align:center;padding:52px 24px}.statecard .ico{font-size:44px;opacity:.5;margin-bottom:8px}.statecard h3{font-size:17px;margin-bottom:6px}.statecard p{font-size:13.5px;color:var(--ink2);max-width:430px;margin:0 auto 16px}
 .skel{background:linear-gradient(90deg,var(--line) 25%,var(--greens) 37%,var(--line) 63%);background-size:400% 100%;animation:sk 1.3s infinite;border-radius:9px}
 @keyframes sk{0%{background-position:100% 0}100%{background-position:-100% 0}}
@@ -219,34 +219,34 @@ html[data-theme=dark] .pbar i{background:linear-gradient(90deg,#b8f09e,#4ade80)}
 /* ---- footer ---- */
 .foot{border-top:1px solid var(--line);color:var(--ink3);font-size:12.5px;text-align:center;padding:20px 0}
 
-/* ---- การเข้าถึง (WCAG 2.2) ---- */
+/* ---- เธเธฒเธฃเน€เธเนเธฒเธ–เธถเธ (WCAG 2.2) ---- */
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 :focus-visible{outline:3px solid var(--green2);outline-offset:2px;border-radius:6px}
 .tab:focus-visible,.btn:focus-visible{outline-offset:3px}
 @media(prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
 
 /* ============================================================
-   ★ ส่วนเพิ่มเฉพาะของ SRDI External Fund 2.0 (ด่าน 2.4)
-   ใช้ตัวแปรสีเดิมทั้งหมด — ไม่แตะ design tokens (มติ SM-D26)
+   โ… เธชเนเธงเธเน€เธเธดเนเธกเน€เธเธเธฒเธฐเธเธญเธ SRDI External Fund 2.0 (เธ”เนเธฒเธ 2.4)
+   เนเธเนเธ•เธฑเธงเนเธเธฃเธชเธตเน€เธ”เธดเธกเธ—เธฑเนเธเธซเธกเธ” โ€” เนเธกเนเนเธ•เธฐ design tokens (เธกเธ•เธด SM-D26)
    ============================================================ */
 
-/* ---- แถว 2 คอลัมน์ในฟอร์ม (ยุบเป็นคอลัมน์เดียวบนมือถือ) ---- */
+/* ---- เนเธ–เธง 2 เธเธญเธฅเธฑเธกเธเนเนเธเธเธญเธฃเนเธก (เธขเธธเธเน€เธเนเธเธเธญเธฅเธฑเธกเธเนเน€เธ”เธตเธขเธงเธเธเธกเธทเธญเธ–เธทเธญ) ---- */
 .frow{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
 .frow.f13{grid-template-columns:1fr 2fr}
 .frow.f31{grid-template-columns:2fr 1fr}
 @media(max-width:760px){.frow,.frow.f13,.frow.f31{grid-template-columns:1fr}}
 
-/* ---- การ์ดอธิบายขั้นตอนบนหน้าแรก ----
-   ใช้ตัวแปรสีเดิมทั้งหมด · ขนาดอยู่ระหว่าง .sec-head h2 (21px) กับเนื้อความ (15px)
-   จึงได้ลำดับชั้นถูกต้องและไม่ล้นกรอบเมื่อหัวข้อยาว */
+/* ---- เธเธฒเธฃเนเธ”เธญเธเธดเธเธฒเธขเธเธฑเนเธเธ•เธญเธเธเธเธซเธเนเธฒเนเธฃเธ ----
+   เนเธเนเธ•เธฑเธงเนเธเธฃเธชเธตเน€เธ”เธดเธกเธ—เธฑเนเธเธซเธกเธ” ยท เธเธเธฒเธ”เธญเธขเธนเนเธฃเธฐเธซเธงเนเธฒเธ .sec-head h2 (21px) เธเธฑเธเน€เธเธทเนเธญเธเธงเธฒเธก (15px)
+   เธเธถเธเนเธ”เนเธฅเธณเธ”เธฑเธเธเธฑเนเธเธ–เธนเธเธ•เนเธญเธเนเธฅเธฐเนเธกเนเธฅเนเธเธเธฃเธญเธเน€เธกเธทเนเธญเธซเธฑเธงเธเนเธญเธขเธฒเธง */
 .cardh{font-size:17px;font-weight:700;color:var(--green);line-height:1.35;margin-bottom:6px}
 .cardp{font-size:13.5px;color:var(--ink2);margin:0;line-height:1.55}
 
-/* ---- หัวข้อย่อยในฟอร์ม (3.1 / 3.2) ---- */
+/* ---- เธซเธฑเธงเธเนเธญเธขเนเธญเธขเนเธเธเธญเธฃเนเธก (3.1 / 3.2) ---- */
 .subhead{font-family:'Prompt';font-weight:700;font-size:15px;color:var(--green);border-bottom:1px solid var(--line);padding-bottom:7px;margin:22px 0 14px}
 .subhead:first-child{margin-top:0}
 
-/* ---- ตัวเลือกบริการแบบการ์ด (ขั้นที่ 2) ---- */
+/* ---- เธ•เธฑเธงเน€เธฅเธทเธญเธเธเธฃเธดเธเธฒเธฃเนเธเธเธเธฒเธฃเนเธ” (เธเธฑเนเธเธ—เธตเน 2) ---- */
 .radiocard{display:flex;gap:11px;align-items:flex-start;border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin-bottom:10px;cursor:pointer;background:var(--panel);transition:.15s}
 .radiocard:hover{border-color:var(--green2)}
 .radiocard.on{border-color:var(--green2);background:var(--greens)}
@@ -254,11 +254,11 @@ html[data-theme=dark] .pbar i{background:linear-gradient(90deg,#b8f09e,#4ade80)}
 .radiocard .rc-t{font-weight:600;font-size:14px}
 .radiocard .rc-s{font-size:12px;color:var(--ink3);margin-top:2px}
 
-/* ---- ช่องที่ถูกล็อกเพราะระบบเติมให้ (โหมดงวดถัดไป) ---- */
+/* ---- เธเนเธญเธเธ—เธตเนเธ–เธนเธเธฅเนเธญเธเน€เธเธฃเธฒเธฐเธฃเธฐเธเธเน€เธ•เธดเธกเนเธซเน (เนเธซเธกเธ”เธเธงเธ”เธ–เธฑเธ”เนเธ) ---- */
 input[readonly],textarea[readonly]{background:var(--panel2);color:var(--ink2);cursor:not-allowed}
 .lockhint{font-size:11.5px;color:var(--ink3);margin-top:4px}
 
-/* ---- บล็อกกระจายงบ 8 หน่วยงาน ---- */
+/* ---- เธเธฅเนเธญเธเธเธฃเธฐเธเธฒเธขเธเธ 8 เธซเธเนเธงเธขเธเธฒเธ ---- */
 .distbox{border:1px solid var(--greens-line);background:var(--greens);border-radius:var(--r);padding:16px 18px;margin:14px 0}
 .distrow{display:grid;grid-template-columns:1fr 190px;gap:10px;align-items:center;margin-bottom:8px}
 .distrow label{font-size:13px;color:var(--ink2)}
@@ -268,10 +268,10 @@ input[readonly],textarea[readonly]{background:var(--panel2);color:var(--ink2);cu
 .distsum.ok{color:var(--green)}
 .distsum.bad{color:var(--red)}
 
-/* ---- การ์ดผลการยื่นคำขอ (โชว์รหัสบริการ) ---- */
+/* ---- เธเธฒเธฃเนเธ”เธเธฅเธเธฒเธฃเธขเธทเนเธเธเธณเธเธญ (เนเธเธงเนเธฃเธซเธฑเธชเธเธฃเธดเธเธฒเธฃ) ---- */
 .resultid{font-family:'Prompt';font-weight:800;font-size:26px;color:var(--green);letter-spacing:.5px;word-break:break-all}
 
-/* ---- การ์ดรายการติดตาม (1 การ์ด = 1 งวด) ---- */
+/* ---- เธเธฒเธฃเนเธ”เธฃเธฒเธขเธเธฒเธฃเธ•เธดเธ”เธ•เธฒเธก (1 เธเธฒเธฃเนเธ” = 1 เธเธงเธ”) ---- */
 .trackcard{margin-bottom:14px}
 .trackcard .tc-head{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:4px}
 .trackcard .tc-id{font-family:'Prompt';font-weight:700;font-size:16px;color:var(--green)}
@@ -280,30 +280,30 @@ input[readonly],textarea[readonly]{background:var(--panel2);color:var(--ink2);cu
 .tl li.off .tt{color:var(--purple-tx)}
 .tl li.pending .tt{color:var(--ink3);font-weight:500}
 
-/* ---- ตารางคู่คีย์-ค่า สำหรับหน้ารายละเอียด ---- */
+/* ---- เธ•เธฒเธฃเธฒเธเธเธนเนเธเธตเธขเน-เธเนเธฒ เธชเธณเธซเธฃเธฑเธเธซเธเนเธฒเธฃเธฒเธขเธฅเธฐเน€เธญเธตเธขเธ” ---- */
 .dl{display:grid;grid-template-columns:210px 1fr;gap:8px 14px;font-size:13.5px}
 .dl dt{color:var(--ink3);font-weight:600;margin:0}
 .dl dd{margin:0;word-break:break-word}
 @media(max-width:640px){.dl{grid-template-columns:1fr}.dl dd{margin-bottom:8px}}
 
-/* ---- แบบประเมินดาว ---- */
+/* ---- เนเธเธเธเธฃเธฐเน€เธกเธดเธเธ”เธฒเธง ---- */
 .stars{display:flex;gap:4px;line-height:1}
 .stars span.on{color:#f0a92a}
 .stars span:focus-visible{outline:3px solid var(--green2);outline-offset:2px;border-radius:6px}
 .starlabel{font-size:13.5px;font-weight:600;margin-bottom:5px}
 
 /* ==================================================================
-   ★ เฟส 3 — หน้าเจ้าหน้าที่ (คิวงาน · แดชบอร์ด)
-   ใช้ตัวแปรสีของธีมทั้งหมด ไม่ประกาศสีใหม่ (มติ SM-D26)
+   โ… เน€เธเธช 3 โ€” เธซเธเนเธฒเน€เธเนเธฒเธซเธเนเธฒเธ—เธตเน (เธเธดเธงเธเธฒเธ ยท เนเธ”เธเธเธญเธฃเนเธ”)
+   เนเธเนเธ•เธฑเธงเนเธเธฃเธชเธตเธเธญเธเธเธตเธกเธ—เธฑเนเธเธซเธกเธ” เนเธกเนเธเธฃเธฐเธเธฒเธจเธชเธตเนเธซเธกเน (เธกเธ•เธด SM-D26)
    ================================================================== */
 
-/* ---- การ์ดงาน 1 แถวในคิว/ตาราง ---- */
+/* ---- เธเธฒเธฃเนเธ”เธเธฒเธ 1 เนเธ–เธงเนเธเธเธดเธง/เธ•เธฒเธฃเธฒเธ ---- */
 .stafftask{border:1px solid var(--line);border-radius:var(--r);padding:13px 15px;margin-bottom:11px;background:var(--panel2)}
 .stafftask .st-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:7px}
 .stafftask .st-body{font-size:13.5px;display:flex;flex-direction:column;gap:3px}
 .stafftask .st-body a{color:var(--green);font-weight:600}
 
-/* ---- แถบควบคุมในแถว (เลือกสถานะ + หมายเหตุ + ไฟล์ + ปุ่ม) ---- */
+/* ---- เนเธ–เธเธเธงเธเธเธธเธกเนเธเนเธ–เธง (เน€เธฅเธทเธญเธเธชเธ–เธฒเธเธฐ + เธซเธกเธฒเธขเน€เธซเธ•เธธ + เนเธเธฅเน + เธเธธเนเธก) ---- */
 .rowact{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
 .rowact select,.rowact input[type=text]{font-family:inherit;font-size:13.5px;padding:8px 10px;border:1px solid var(--line);
   border-radius:10px;background:var(--panel);color:var(--ink)}
@@ -312,7 +312,7 @@ input[readonly],textarea[readonly]{background:var(--panel2);color:var(--ink2);cu
 .rowact .btn{padding:8px 15px;font-size:13.5px}
 .rowact .err-tx{flex-basis:100%}
 
-/* ---- กราฟแท่งแนวนอนแบบ CSS ล้วน (ไม่พึ่งไลบรารีภายนอก) ---- */
+/* ---- เธเธฃเธฒเธเนเธ—เนเธเนเธเธงเธเธญเธเนเธเธ CSS เธฅเนเธงเธ (เนเธกเนเธเธถเนเธเนเธฅเธเธฃเธฒเธฃเธตเธ เธฒเธขเธเธญเธ) ---- */
 .barrow{display:grid;grid-template-columns:minmax(90px,32%) 1fr auto;gap:9px;align-items:center;margin-bottom:7px;font-size:12.5px}
 .barlbl{color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bartrack{background:var(--panel2);border-radius:999px;height:11px;overflow:hidden}
@@ -321,18 +321,18 @@ input[readonly],textarea[readonly]{background:var(--panel2);color:var(--ink2);cu
 @media(max-width:640px){.barrow{grid-template-columns:1fr auto}.barlbl{grid-column:1/-1}}
 
 /* ==================================================================
-   ★ ชุด B — ทะเบียนเจ้าหน้าที่ (EF-S16) · ร่องรอยการใช้งาน (EF-S17)
-   ใช้ตัวแปรสีของธีมทั้งหมด ไม่ประกาศสีใหม่ (มติ SM-D26)
+   โ… เธเธธเธ” B โ€” เธ—เธฐเน€เธเธตเธขเธเน€เธเนเธฒเธซเธเนเธฒเธ—เธตเน (EF-S16) ยท เธฃเนเธญเธเธฃเธญเธขเธเธฒเธฃเนเธเนเธเธฒเธ (EF-S17)
+   เนเธเนเธ•เธฑเธงเนเธเธฃเธชเธตเธเธญเธเธเธตเธกเธ—เธฑเนเธเธซเธกเธ” เนเธกเนเธเธฃเธฐเธเธฒเธจเธชเธตเนเธซเธกเน (เธกเธ•เธด SM-D26)
    ================================================================== */
 
-/* ---- แถวในตารางรายชื่อ/ร่องรอย (1 แถว = 1 รายการ) ---- */
+/* ---- เนเธ–เธงเนเธเธ•เธฒเธฃเธฒเธเธฃเธฒเธขเธเธทเนเธญ/เธฃเนเธญเธเธฃเธญเธข (1 เนเธ–เธง = 1 เธฃเธฒเธขเธเธฒเธฃ) ---- */
 .dtrow{display:grid;gap:6px 14px;align-items:center;padding:11px 2px;
   border-bottom:1px dashed var(--line);font-size:13.5px}
 .dtrow:last-child{border-bottom:none}
 .dtrow .help{font-size:12.5px}
 .dtrow.dt-reg{grid-template-columns:minmax(190px,2.2fr) auto minmax(130px,1fr) auto}
 .dtrow.dt-aud{grid-template-columns:minmax(135px,150px) minmax(230px,1fr) minmax(140px,185px);align-items:start}
-/* เหตุการณ์ที่ควรจับตา (ไล่เดาอีเมล · ประเมินแล้วไม่มีใบเสร็จ · สำรองข้อมูลล้ม) */
+/* เน€เธซเธ•เธธเธเธฒเธฃเธ“เนเธ—เธตเนเธเธงเธฃเธเธฑเธเธ•เธฒ (เนเธฅเนเน€เธ”เธฒเธญเธตเน€เธกเธฅ ยท เธเธฃเธฐเน€เธกเธดเธเนเธฅเนเธงเนเธกเนเธกเธตเนเธเน€เธชเธฃเนเธ ยท เธชเธณเธฃเธญเธเธเนเธญเธกเธนเธฅเธฅเนเธก) */
 .dtrow.watch{background:var(--ambers);border-radius:10px;padding-left:10px;padding-right:10px;border-bottom-color:transparent}
 .dtact{text-align:right}
 @media(max-width:820px){
@@ -340,35 +340,126 @@ input[readonly],textarea[readonly]{background:var(--panel2);color:var(--ink2);cu
   .dtact{text-align:left}
 }
 
-/* ---- แถวฟอร์ม 3 ช่อง (ใช้ในกล่อง "เพิ่มเจ้าหน้าที่") ---- */
+/* ---- เนเธ–เธงเธเธญเธฃเนเธก 3 เธเนเธญเธ (เนเธเนเนเธเธเธฅเนเธญเธ "เน€เธเธดเนเธกเน€เธเนเธฒเธซเธเนเธฒเธ—เธตเน") ---- */
 .frow.f3{grid-template-columns:1fr 1fr 1fr}
 @media(max-width:760px){.frow.f3{grid-template-columns:1fr}}
 
-/* ---- ★ แถบเมนูบนจอแคบ: เลื่อนแนวนอนบรรทัดเดียว แทนการตกบรรทัดเรื่อย ๆ ----
-   🔴 ที่มา: วัดบนจอ 375px จริงหลังทำ EF-D69 (หัวเว็บค้างบนจอตลอด ความสูงจึงเป็นราคาที่จ่ายทุกหน้า)
-      ผู้ใช้ทั่วไป 4 ปุ่ม → ตก 4 บรรทัด สูง 198px = 24% ของจอ  (มีมาก่อนชุด B แล้ว)
-      admin หลังชุด B 8 ปุ่ม → สูง 360px = 44% ของจอ           (ชุด B ทำให้แย่ลง จึงต้องแก้)
-   เปลี่ยนเป็นแถบเลื่อนแนวนอน: หัวเว็บเหลือ ~110px ทั้งสองกรณี
-   ★ ไม่แตะสี ฟอนต์ หรือถ้อยคำใด ๆ — เปลี่ยนเฉพาะการจัดวางบนจอแคบ (ไม่ขัด EF-D5 · SM-D26) */
+/* ---- โ… เนเธ–เธเน€เธกเธเธนเธเธเธเธญเนเธเธ: เน€เธฅเธทเนเธญเธเนเธเธงเธเธญเธเธเธฃเธฃเธ—เธฑเธ”เน€เธ”เธตเธขเธง เนเธ—เธเธเธฒเธฃเธ•เธเธเธฃเธฃเธ—เธฑเธ”เน€เธฃเธทเนเธญเธข เน ----
+   ๐”ด เธ—เธตเนเธกเธฒ: เธงเธฑเธ”เธเธเธเธญ 375px เธเธฃเธดเธเธซเธฅเธฑเธเธ—เธณ EF-D69 (เธซเธฑเธงเน€เธงเนเธเธเนเธฒเธเธเธเธเธญเธ•เธฅเธญเธ” เธเธงเธฒเธกเธชเธนเธเธเธถเธเน€เธเนเธเธฃเธฒเธเธฒเธ—เธตเนเธเนเธฒเธขเธ—เธธเธเธซเธเนเธฒ)
+      เธเธนเนเนเธเนเธ—เธฑเนเธงเนเธ 4 เธเธธเนเธก โ’ เธ•เธ 4 เธเธฃเธฃเธ—เธฑเธ” เธชเธนเธ 198px = 24% เธเธญเธเธเธญ  (เธกเธตเธกเธฒเธเนเธญเธเธเธธเธ” B เนเธฅเนเธง)
+      admin เธซเธฅเธฑเธเธเธธเธ” B 8 เธเธธเนเธก โ’ เธชเธนเธ 360px = 44% เธเธญเธเธเธญ           (เธเธธเธ” B เธ—เธณเนเธซเนเนเธขเนเธฅเธ เธเธถเธเธ•เนเธญเธเนเธเน)
+   เน€เธเธฅเธตเนเธขเธเน€เธเนเธเนเธ–เธเน€เธฅเธทเนเธญเธเนเธเธงเธเธญเธ: เธซเธฑเธงเน€เธงเนเธเน€เธซเธฅเธทเธญ ~110px เธ—เธฑเนเธเธชเธญเธเธเธฃเธ“เธต
+   โ… เนเธกเนเนเธ•เธฐเธชเธต เธเธญเธเธ•เน เธซเธฃเธทเธญเธ–เนเธญเธขเธเธณเนเธ” เน โ€” เน€เธเธฅเธตเนเธขเธเน€เธเธเธฒเธฐเธเธฒเธฃเธเธฑเธ”เธงเธฒเธเธเธเธเธญเนเธเธ (เนเธกเนเธเธฑเธ” EF-D5 ยท SM-D26) */
 @media(max-width:820px){
   .topbar .wrap{flex-wrap:wrap;row-gap:8px}
   .topbar .spacer{display:none}
-  /* ★ EF-D78: nowrap/overflow-x/scrollbar ย้ายไปอยู่ในกฎ .tabs หลักแล้ว (ใช้ทุกขนาดจอ)
-     เหลือไว้ที่นี่เฉพาะสิ่งที่เป็นของจอแคบจริง ๆ คือให้แถบกินเต็มความกว้าง
-     🔴 ห้ามเขียน nowrap ซ้ำที่นี่อีก — กฎเดียวกันอยู่ 2 ที่แล้ววันหนึ่งจะเพี้ยนจากกัน
-        (นี่คือต้นเหตุที่ทำให้เดสก์ท็อปยังตกบรรทัดอยู่ทั้งที่จอแคบแก้ไปแล้วตั้งแต่ชุด B) */
+  /* โ… EF-D78: nowrap/overflow-x/scrollbar เธขเนเธฒเธขเนเธเธญเธขเธนเนเนเธเธเธ .tabs เธซเธฅเธฑเธเนเธฅเนเธง (เนเธเนเธ—เธธเธเธเธเธฒเธ”เธเธญ)
+     เน€เธซเธฅเธทเธญเนเธงเนเธ—เธตเนเธเธตเนเน€เธเธเธฒเธฐเธชเธดเนเธเธ—เธตเนเน€เธเนเธเธเธญเธเธเธญเนเธเธเธเธฃเธดเธ เน เธเธทเธญเนเธซเนเนเธ–เธเธเธดเธเน€เธ•เนเธกเธเธงเธฒเธกเธเธงเนเธฒเธ
+     ๐”ด เธซเนเธฒเธกเน€เธเธตเธขเธ nowrap เธเนเธณเธ—เธตเนเธเธตเนเธญเธตเธ โ€” เธเธเน€เธ”เธตเธขเธงเธเธฑเธเธญเธขเธนเน 2 เธ—เธตเนเนเธฅเนเธงเธงเธฑเธเธซเธเธถเนเธเธเธฐเน€เธเธตเนเธขเธเธเธฒเธเธเธฑเธ
+        (เธเธตเนเธเธทเธญเธ•เนเธเน€เธซเธ•เธธเธ—เธตเนเธ—เธณเนเธซเนเน€เธ”เธชเธเนเธ—เนเธญเธเธขเธฑเธเธ•เธเธเธฃเธฃเธ—เธฑเธ”เธญเธขเธนเนเธ—เธฑเนเธเธ—เธตเนเธเธญเนเธเธเนเธเนเนเธเนเธฅเนเธงเธ•เธฑเนเธเนเธ•เนเธเธธเธ” B) */
   .tabs{width:100%}
   .tabs .tab{flex:0 0 auto}
 }
 
-/* ---- ★ โหมดพิมพ์ "แบบคำขอ" (SPEC หมวด 9.5 — ซ่อน navbar ตอนพิมพ์) ---- */
+/* ============================================================
+   โ… เธเธธเธ” H โ€” "เนเธเนเธเนเธเธเธเธณเธเธญ A4" เธ—เธตเนเธเธดเธกเธเนเธเธฒเธเธซเธเนเธฒเน€เธงเนเธ
+   (เธกเธ•เธด EF-D101 เธ—เธฑเธ EF-D60 ยท EF-D102 ยท EF-D103 ยท EF-D104 ยท EF-D105)
+   ------------------------------------------------------------
+   ๐”ด เธเธญเธเน€เธ”เธดเธกเธเธญเธเธ”เนเธฒเธ 2.4 เธเธทเธญ "เธเธดเธกเธเนเธ—เธฑเนเธเธซเธเนเธฒเน€เธงเนเธเนเธฅเนเธงเธเนเธญเธเนเธ–เธเน€เธกเธเธน" โ€” **เน€เธฅเธดเธเนเธเนเธ—เธฑเนเธเธเธธเธ”เนเธฅเนเธง** (เธกเธ•เธด EF-D103)
+      เน€เธซเธ•เธธเธเธฅ 2 เธเนเธญเธ—เธตเนเธ—เธณเนเธซเนเธเธญเธเน€เธ”เธดเธกเนเธเนเนเธกเนเนเธ”เนเธเธฃเธดเธ:
+      โ‘  เธซเธเนเธฒเน€เธงเนเธเธญเธญเธเนเธเธเธกเธฒเนเธซเนเธญเนเธฒเธเธเธเธเธญ เนเธกเนเนเธเนเธเธฃเธฐเธ”เธฒเธฉเธฃเธฒเธเธเธฒเธฃเธ—เธตเนเธกเธตเธซเธฑเธงเธซเธเนเธงเธขเธเธฒเธเนเธฅเธฐเธเนเธญเธเธฅเธเธเธฒเธก
+      โ‘ก เธเธฅเนเธญเธ "เธฃเธฒเธขเธฅเธฐเน€เธญเธตเธขเธ”เธเธเธฑเธเน€เธ•เนเธก" เธเธญเธเน€เธเนเธฒเธซเธเนเธฒเธ—เธตเนเธญเธขเธนเนเนเธ `.overlay` เธเธถเนเธเธเธเน€เธ”เธดเธกเธเนเธญเธเธ—เธดเนเธเธ—เธฑเนเธเธเนเธญเธ
+         โ’ เน€เธเนเธฒเธซเธเนเธฒเธ—เธตเนเธเธ”เธเธดเธกเธเนเธเธฒเธเธเธฅเนเธญเธเธเธฑเนเธเธเธฐเนเธ”เน **เธเธฃเธฐเธ”เธฒเธฉเน€เธเธฅเนเธฒ**
+   โ… เธ•เธญเธเธเธตเน `app.js` เธงเธฒเธ”เนเธเนเธเธเธฃเธฐเธ”เธฒเธฉเธฅเธเธเธฅเนเธญเธ `#printSheet` เธเธถเนเธเน€เธเนเธ **เธฅเธนเธเธ•เธฃเธเธเธญเธ `<body>`**
+      (เธซเนเธฒเธกเธขเนเธฒเธขเนเธเนเธงเนเนเธ `#stage` เธซเธฃเธทเธญเนเธ `.overlay` โ€” เธเธฐเธเธฅเธฑเธเนเธเน€เธเธญเธเนเธญ โ‘ก เธ—เธฑเธเธ—เธต)
+   โ… เธ—เธณเนเธกเธชเธตเธเธญเธเนเธเนเธเน€เธเนเธเธ•เธฑเธงเนเธเธฃเธเธญเธเธ•เธฑเธงเน€เธญเธ (`--ph-*`) เนเธกเนเนเธเน token เธเธญเธเธเธตเธก:
+      เนเธซเธกเธ”เธกเธทเธ”เน€เธเธฅเธตเนเธขเธ `--green` เน€เธเนเธ `#b8f09e` (เน€เธเธตเธขเธงเธญเนเธญเธ) เธเธดเธกเธเนเธฅเธเธเธฃเธฐเธ”เธฒเธฉเธเธฒเธงเนเธฅเนเธงเธญเนเธฒเธเนเธกเนเธญเธญเธ
+      เธเนเธฒเธ—เธตเนเนเธชเนเธเธทเธญ **เธเนเธฒเน€เธ”เธตเธขเธงเธเธฑเธ token เนเธซเธกเธ”เธชเธงเนเธฒเธเธ—เธธเธเธ•เธฑเธง** โ€” เนเธกเนเนเธ”เนเนเธเนเธ•เธฑเธงเนเธเธฃเน€เธ”เธดเธกเนเธกเนเนเธ•เนเธ•เธฑเธงเน€เธ”เธตเธขเธง (เธกเธ•เธด SM-D26)
+   โ… เธชเนเธ•เธฅเนเธเธญเธเนเธเนเธเธ•เธฑเนเธเนเธเธงเธฒเธเนเธงเน **เธเธญเธเธเธฅเนเธญเธเนเธซเธกเธ”เธเธดเธกเธเน** เน€เธเธทเนเธญเนเธซเนเน€เธเธดเธ”เธ”เธนเนเธฅเธฐ **เธงเธฑเธ”เธเธญเธเธเธฃเธดเธเธเธเธเธญ** เนเธ”เน
+      เธ”เนเธงเธขเธเธฒเธฃเธชเธฑเนเธ `display:block` เธเธฑเนเธงเธเธฃเธฒเธง โ€” เธเธตเนเธเธทเธญเธงเธดเธเธตเน€เธเนเธเธซเธฅเธฑเธเธเธฒเธเธเธญเธเธเธธเธ”เธเธตเน (เธเธฑเธเธ”เธฑเธเธเนเธญ 52)
+   ๐”ด เธซเนเธฒเธกเธเธดเธกเธเนเธเธณเธงเนเธฒ at-media + เธเธณเธงเนเธฒ print เธ•เธดเธ”เธเธฑเธเนเธเธเธญเธกเน€เธกเธเธ•เนเธเนเธญเธเธเธฅเนเธญเธเธเธฃเธดเธ โ€”
+      `frontend-check.js` เธซเธฒเธเธฅเนเธญเธเธ”เนเธงเธขเธเธฒเธฃ split เธ—เธตเนเธเนเธญเธเธงเธฒเธกเธเธฑเนเธ เน€เธเธญเนเธเธเธญเธกเน€เธกเธเธ•เนเธเนเธญเธเธเธฐเธ•เธฑเธ”เธเธดเธ”เธ—เธตเน
+   ============================================================ */
+#printSheet{
+  display:none;
+  --ph-green:#1d7a4f;--ph-ink:#222831;--ph-ink2:#5d6673;--ph-line:#d9d5c8;--ph-soft:#f4f7f4;
+  /* ๐”ด เธฃเธฐเธขเธฐเธเธญเธเนเธฅเธฐเธฃเธฐเธขเธฐเธซเนเธฒเธเธ—เธธเธเธเนเธฒเนเธเธเธฅเนเธญเธเธเธตเนเธ–เธนเธ "เธงเธฑเธ”เธเธเธเธญเธเธฃเธดเธ" เนเธฅเนเธงเธเธตเธเธฅเธเธเธฒเธเนเธเธฅเนเธ•เธฑเธงเธญเธขเนเธฒเธ
+     เธ—เธตเนเธเนเธฒเน€เธ”เธดเธก (13/14/12 เธกเธก. + margin 11px) เนเธเนเธเธชเธนเธ 302.2 เธกเธก. = เน€เธเธดเธ A4 เนเธฅเธฐ
+     **เธ—เนเธฒเธขเธเธฃเธฐเธ”เธฒเธฉเธ—เธตเนเธ•เธฃเธถเธเนเธงเนเธ—เธฑเธเธเนเธญเธเธฅเธเธเธฒเธก** ยท เธเนเธฒเธเธธเธ”เธเธตเนเธงเธฑเธ”เนเธ”เน ~282 เธกเธก. = เธเธญเธ”เธต 1 เธซเธเนเธฒเนเธ”เธขเธกเธตเธ—เธตเนเน€เธซเธฅเธทเธญเธเธฃเธดเธ
+     โ… เธซเนเธฒเธกเธเธขเธฒเธขเธเธฅเธฑเธเนเธ”เธขเนเธกเนเธงเธฑเธ”เนเธซเธกเนเนเธเน€เธเธฃเธฒเธงเนเน€เธเธญเธฃเน โ€” เธ•เธฑเธงเธ•เธฃเธงเธ static เธกเธญเธเนเธกเนเน€เธซเนเธเธญเธฒเธเธฒเธฃเธเธตเนเน€เธฅเธข */
+  /* 🔴 min-height 297mm = ความสูงกระดาษ A4 หนึ่งแผ่นเต็ม — จำเป็น 2 เหตุผล
+     ① ท้ายกระดาษเป็น position:absolute บนจอ แต่เป็น position:fixed ตอนพิมพ์
+        ถ้าไม่ตรึงความสูงแผ่นไว้ ตอนวัดบนจอมันจะเกาะ "ท้ายเนื้อหา" (ทับช่องลงนาม)
+        ส่วนตอนพิมพ์เกาะ "ท้ายหน้ากระดาษ" ⇒ **ที่วัดบนจอจะไม่ใช่ที่ออกกระดาษ**
+     ② กันแผ่นสั้นกว่าหน้ากระดาษจนกล่องท้ายลอยขึ้นมากลางหน้า
+     ★ box-sizing:border-box ของธีมทำให้ 297mm นับรวม padding แล้ว = 1 หน้าพอดีเป๊ะ */
+  width:210mm;min-height:297mm;margin:0 auto;padding:12mm 14mm 10mm;position:relative;
+  background:#fff;color:var(--ph-ink);
+  /* ๐”ด 12.5px เนเธกเนเนเธเน 13.5px โ€” เธงเธฑเธ”เธเธญเธเธเธฃเธดเธเนเธเน€เธเธฃเธฒเธงเนเน€เธเธญเธฃเนเนเธฅเนเธงเธเธเธงเนเธฒ 13.5px เธ—เธณเนเธซเนเนเธเนเธเธชเธนเธ 308.2 เธกเธก.
+     เธเธถเนเธ **เน€เธเธดเธเธเธฃเธฐเธ”เธฒเธฉ A4 (297 เธกเธก.)** เนเธฅเนเธงเธฅเนเธเนเธเธซเธเนเธฒเธ—เธตเน 2 เนเธเธเน€เธเธทเธญเธเธงเนเธฒเธเน€เธเธฅเนเธฒ
+     โ… เนเธเธฅเนเธ•เธฑเธงเธญเธขเนเธฒเธเธ—เธตเนเธญเธเธธเธกเธฑเธ•เธดเธกเธต `font-size:12.5px` เธญเธขเธนเนเนเธเธเธฅเนเธญเธเนเธซเธกเธ”เธเธดเธกเธเนเธเธญเธเธกเธฑเธเน€เธญเธ โ€” เธ•เธญเธเธขเนเธฒเธขเธกเธฒเธเธกเธ•เธเธเธฃเธฃเธ—เธฑเธ”เธเธตเน
+     โ… เนเธเนเธเธเธฒเธ”เน€เธ”เธตเธขเธงเธ—เธฑเนเธเธเธเธเธญเนเธฅเธฐเธ•เธญเธเธเธดเธกเธเนเนเธ”เธขเธ•เธฑเนเธเนเธ: เนเธเนเธเธเธตเนเธ–เธนเธเธเนเธญเธเธเธเธเธญเธญเธขเธนเนเนเธฅเนเธง
+       เธเธฒเธฃเธกเธต 2 เธเธเธฒเธ”เนเธเธฅเธงเนเธฒ "เธ•เธฑเธงเน€เธฅเธเธ—เธตเนเธงเธฑเธ”เธเธเธเธญ โ  เธ•เธฑเธงเน€เธฅเธเธ—เธตเนเธญเธญเธเธเธฃเธฐเธ”เธฒเธฉ" เธเธถเนเธเธเธทเธญเธ—เธตเนเธกเธฒเธเธญเธเธเธฑเนเธเธเธตเนเธเธญเธ”เธต */
+  font-family:'Anuphan','Sarabun','TH Sarabun New',sans-serif;font-size:12.5px;line-height:1.5;
+  -webkit-print-color-adjust:exact;print-color-adjust:exact;
+}
+#printSheet .ph-head{display:flex;align-items:flex-start;gap:12px;border-bottom:2.5px solid var(--ph-green);padding-bottom:9px}
+#printSheet .ph-logo{width:56px;height:56px;flex:0 0 56px;object-fit:contain}
+#printSheet .ph-logofb{border-radius:8px;background:var(--ph-green);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-family:'Prompt',sans-serif;font-size:15px;letter-spacing:.5px}
+#printSheet .ph-org{flex:1;min-width:0}
+#printSheet .ph-org b{display:block;font-family:'Prompt',sans-serif;font-size:16.5px;color:var(--ph-green);line-height:1.25}
+#printSheet .ph-org span{display:block;font-size:12.5px;color:var(--ph-ink2)}
+#printSheet .ph-meta{text-align:right;flex:0 0 auto;font-size:12px;color:var(--ph-ink2);line-height:1.6}
+#printSheet .ph-sid{font-family:'Prompt',sans-serif;font-size:15px;font-weight:700;color:var(--ph-ink);letter-spacing:.4px}
+#printSheet .ph-title{text-align:center;margin:8px 0 9px}
+#printSheet .ph-title h1{font-family:'Prompt',sans-serif;font-size:19px;font-weight:700;margin:0;letter-spacing:.2px}
+#printSheet .ph-title p{margin:2px 0 0;font-size:12px;color:var(--ph-ink2)}
+#printSheet .ph-sec{margin-top:8px}
+#printSheet .ph-sec>h2{font-family:'Prompt',sans-serif;font-size:13.5px;font-weight:600;margin:0 0 5px;padding:3px 9px;background:var(--ph-soft);border-left:3.5px solid var(--ph-green);color:var(--ph-green)}
+#printSheet table{width:100%;border-collapse:collapse}
+#printSheet .ph-kv td{padding:2.6px 8px;vertical-align:top;border-bottom:1px dotted var(--ph-line)}
+#printSheet .ph-kv td.k{width:31%;color:var(--ph-ink2);white-space:nowrap}
+#printSheet .ph-kv td.v{font-weight:500}
+#printSheet .ph-kv tr:last-child td{border-bottom:none}
+#printSheet .ph-grid{border:1px solid var(--ph-line)}
+#printSheet .ph-grid th{background:var(--ph-soft);font-family:'Prompt',sans-serif;font-weight:600;font-size:12.5px;text-align:left;padding:4px 8px;border-bottom:1px solid var(--ph-line);color:var(--ph-ink)}
+#printSheet .ph-grid td{padding:3.6px 8px;border-bottom:1px solid #efeee7;vertical-align:top}
+#printSheet .ph-grid tr:last-child td{border-bottom:none}
+#printSheet .ph-num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+#printSheet .ph-grid tr.ph-sum td{background:#fbfbf8;font-weight:700;border-top:1.5px solid var(--ph-line)}
+#printSheet .ph-ok{color:var(--ph-green);font-weight:600}
+#printSheet .ph-bad{color:#c9445e;font-weight:600}
+#printSheet .ph-sub{color:var(--ph-ink2);font-size:12px;display:block}
+#printSheet .ph-steps{display:flex;gap:0;margin-top:6px}
+#printSheet .ph-step{flex:1;text-align:center;position:relative;padding:14px 4px 0;font-size:10.5px;color:var(--ph-ink2);line-height:1.3}
+#printSheet .ph-step::before{content:'';position:absolute;top:4px;left:50%;transform:translateX(-50%);width:11px;height:11px;border-radius:50%;background:#fff;border:2px solid #cfd4cf;z-index:2}
+#printSheet .ph-step::after{content:'';position:absolute;top:9px;left:-50%;width:100%;height:2px;background:#dfe3df;z-index:1}
+#printSheet .ph-step:first-child::after{display:none}
+#printSheet .ph-step.done::before{background:var(--ph-green);border-color:var(--ph-green)}
+#printSheet .ph-step.done::after{background:var(--ph-green)}
+#printSheet .ph-step.done{color:var(--ph-ink);font-weight:600}
+#printSheet .ph-step.now::before{box-shadow:0 0 0 3px rgba(29,122,79,.18)}
+#printSheet .ph-off{border-left:3px solid #c96f1e;padding-left:8px;margin-top:6px}
+#printSheet .ph-sign{display:flex;gap:26px;margin-top:10px}
+#printSheet .ph-sign>div{flex:1;text-align:center;font-size:12.5px;line-height:2.1}
+#printSheet .ph-ln{display:block;border-bottom:1px dotted #9aa0a6;height:26px;margin:0 6px}
+#printSheet .ph-role{color:var(--ph-ink2);font-size:11.5px}
+#printSheet .ph-note{font-size:11px;color:var(--ph-ink2);margin-top:5px}
+#printSheet .ph-flag{display:inline-block;background:#fdf6e3;border:1px solid #e8d9a8;color:#7a5d00;font-size:11px;padding:1px 7px;border-radius:9px}
+#printSheet .ph-foot{position:absolute;left:14mm;right:14mm;bottom:5mm;border-top:1px solid var(--ph-line);padding-top:5px;font-size:10.5px;color:var(--ph-ink2);display:flex;justify-content:space-between;gap:10px}
+
+/* ---- เนเธซเธกเธ”เธเธดเธกเธเน: เนเธเธงเนเน€เธเธเธฒเธฐเนเธเนเธเธเธฃเธฐเธ”เธฒเธฉ เธเนเธญเธเธซเธเนเธฒเน€เธงเนเธเธ—เธฑเนเธเธซเธเนเธฒ (SPEC เธซเธกเธงเธ” 9.5 เธเธเธฑเธเธเธธเธ” H) ----
+   ๐”ด เธซเนเธฒเธกเธเธฑเธ”เธฃเธนเธเนเธเธเธเธเนเธเธเธฅเนเธญเธเธเธตเนเนเธซเนเธเธตเธเธเธฒเธเธดเธ”เธเธถเนเธเธ•เนเธเธเธฃเธฃเธ—เธฑเธ” โ€” `frontend-check.js` เธ•เธฑเธ”เธเธฅเนเธญเธเธเธตเน
+      เธ”เนเธงเธขเธเธฒเธฃ split('\n}') เธ–เนเธฒเนเธ•เธเธเธเน€เธเนเธเธซเธฅเธฒเธขเธเธฃเธฃเธ—เธฑเธ” เธ•เธฑเธงเธ•เธฃเธงเธเธเธฐเธญเนเธฒเธเนเธ”เนเนเธเนเธ—เนเธญเธเนเธฃเธเนเธฅเนเธงเธเนเธญเธเธเธดเธ”
+   โ… `body>*{display:none}` เธเธทเธญเน€เธเธฃเธฒเธฐเธ–เธฒเธงเธฃ: เธเธญเธเนเธซเธกเนเธ—เธตเนเนเธเธฃเน€เธเธดเนเธกเน€เธเนเธฒ <body> เธงเธฑเธเธซเธฅเธฑเธเธเธฐเนเธกเนเธ•เธดเธ”เนเธเนเธเธเธฃเธฐเธ”เธฒเธฉเน€เธญเธ
+     เธชเนเธงเธเธฃเธฒเธขเธเธทเนเธญเธ—เธตเนเน€เธเธตเธขเธเนเธงเนเธ•เธฃเธ เน เน€เธเนเธเนเธงเนเน€เธเธฃเธฒเธฐเน€เธเนเธเธเธญเธเธ—เธตเน "เธซเนเธฒเธกเธ•เธดเธ”เนเธเนเธเธเธฃเธฐเธ”เธฒเธฉ" เธ•เธฒเธก SPEC เนเธฅเธฐเธเนเธญเธเธญเธขเธนเนเธเธฑเนเธเนเธเธ”เนเธงเธข */
 @media print{
+  @page{size:A4;margin:0}
+  html,body{background:#fff!important;margin:0;padding:0}
+  body>*{display:none!important}
   #stickyTop,.topbar,.userbar,.foot,.app-banner,.overlay,.toast,.noprint,.btn{display:none!important}
-  body{background:#fff;color:#000;font-size:12pt}
-  main{padding:0}
-  .wrap{max-width:none;padding:0}
-  .panel{box-shadow:none;border:1px solid #999;break-inside:avoid;page-break-inside:avoid;margin-bottom:10px}
-  .printhead{display:block!important;text-align:center;margin-bottom:14px}
+  body>#printSheet{display:block!important;width:auto;margin:0;box-shadow:none}
+  #printSheet .ph-foot{position:fixed}
+  #printSheet .ph-sec,#printSheet .ph-grid,#printSheet .ph-kv,#printSheet .ph-steps,#printSheet .ph-sign{break-inside:avoid;page-break-inside:avoid}
   a[href]::after{content:""}
 }
-.printhead{display:none}

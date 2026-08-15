@@ -32,7 +32,7 @@
    (ห้ามใช้ URL ที่ลงท้ายด้วย /dev — ตัวนั้นใช้ได้เฉพาะตอนที่ท่านล็อกอินบัญชีเจ้าของสคริปต์อยู่)
    ดูขั้นตอนใน README_Phase2_วิธีติดตั้ง.md หมวด 14 (ตาราง "บัญชีจุดที่ต้องกรอกเอง")
 */
-const API_URL = 'https://script.google.com/macros/s/AKfycbydKxpRgWhFxBgxT4Dfk-YMzaM8s_Gi797ylvabLSM-G5yQO57nith6VrCwQKqn9f80-w/exec';
+const API_URL = 'PASTE_WEBAPP_EXEC_URL_HERE';
 
 /* ============================================================
    0) ค่าคงที่ของหน้าเว็บ
@@ -101,6 +101,16 @@ const FALLBACK_FUNDING_SOURCES = [
   'อื่นๆ โปรดระบุ'
 ];
 const FALLBACK_FEEDBACK_CATEGORIES = ['แจ้งปัญหาการใช้งาน', 'ข้อเสนอแนะ', 'สอบถาม', 'อื่น ๆ'];
+/* ★ ชุด H: ลำดับ 5 ขั้นของงานบริการ — เดิมชุดนี้ถูกเขียนไว้ "ในตัว" stepListHtml() ที่เดียว
+   ชุด H ต้องใช้ชุดเดียวกันวาดแถบขั้นตอนบนกระดาษ จึงยกออกมาเป็นแหล่งเดียว (กฎ single-source)
+   🔴 ห้ามพิมพ์รายชื่อขั้นซ้ำที่อื่นอีก — ค่าจริงมาจากชีตทาง CFG.status_steps ชุดนี้เป็นตัวสำรอง */
+const FALLBACK_STATUS_STEPS = [
+  'บันทึกข้อมูลขอรับบริการ',
+  'บันทึกข้อมูลงบประมาณเข้าสู่ระบบ YRU ERP',
+  'งานการคลังออกใบเสร็จ',
+  'สำเนาใบเสร็จรับเงิน (สำเร็จ)',
+  'นำส่งใบเสร็จกลับไปยังแหล่งทุน'
+];
 
 /* ★ ข้อความหน้าแรก/popup ที่ผู้ดูแลแก้ได้จากแท็บ UIText ในชีต (มติ EF-D44)
    ค่าจริงมาจาก CFG.ui_text · ชุดนี้เป็นค่าสำรองไว้ให้หน้าเว็บยังวาดได้ถ้า config โหลดไม่ทัน
@@ -366,6 +376,7 @@ function staffTypes()     { return (CFG && CFG.staff_types     && CFG.staff_type
 function faculties()      { return (CFG && CFG.faculties       && CFG.faculties.length)       ? CFG.faculties       : FALLBACK_FACULTIES; }
 function fundingSources() { return (CFG && CFG.funding_sources && CFG.funding_sources.length) ? CFG.funding_sources : FALLBACK_FUNDING_SOURCES; }
 function feedbackCats()   { return (CFG && CFG.feedback_categories && CFG.feedback_categories.length) ? CFG.feedback_categories : FALLBACK_FEEDBACK_CATEGORIES; }
+function statusSteps()    { return (CFG && CFG.status_steps    && CFG.status_steps.length)    ? CFG.status_steps    : FALLBACK_STATUS_STEPS; }
 
 /* ★ ข้อความจากแท็บ UIText (มติ EF-D44) — ชีตชนะโค้ด · ไม่มีค่า = ใช้ค่าสำรองในไฟล์นี้ */
 function uiText(key) {
@@ -389,6 +400,22 @@ function isOtherFunding(v) {
   return s === 'อื่นๆ' || s === 'อื่นๆ โปรดระบุ';
 }
 function fundingOptionValue(label) { return isOtherFunding(label) ? 'อื่นๆ' : label; }
+
+/* ★ ชุด H (💡 คุณสุ่ยสั่งผูกเข้าชุดนี้) — รายการแนะนำของช่อง "ชื่อหน่วยงานในใบเสร็จ"
+   ที่มา: เจอของจริงในชีตพิมพ์ผิดเป็น "เชิงพืิ้นที่" ซึ่งจะติดไปบนใบเสร็จของแหล่งทุนถาวร
+   🔴 เป็น "คำแนะนำ" ไม่ใช่ตัวเลือกปิดตาย — <datalist> ยังพิมพ์ชื่ออื่นได้เสมอ
+      (ปิดตายไม่ได้ เพราะหน่วยงานผู้ออกใบเสร็จบางรายไม่อยู่ในรายชื่อแหล่งทุน)
+   ★ ที่มาของรายการ = แหล่งทุนในชีต (CFG.funding_sources) ที่ผู้ดูแลแก้เองได้อยู่แล้ว
+     — ไม่เพิ่มคีย์ตั้งค่าใหม่ ไม่เพิ่ม action ไม่แตะชีต
+   ★ ตัด "อื่นๆ โปรดระบุ" ออก เพราะไม่ใช่ชื่อหน่วยงาน (กับดักข้อ 25: ค่า value ≠ ข้อความบนจอ) */
+function receiptOrgListHtml() {
+  return '<datalist id="receiptOrgOptions">'
+    + fundingSources()
+        .filter(function (s) { return !isOtherFunding(s); })
+        .map(function (s) { return '<option value="' + esc(s) + '"></option>'; })
+        .join('')
+    + '</datalist>';
+}
 
 /** ★ ยอมรับเฉพาะลิงก์ที่ขึ้นต้นด้วย http:// หรือ https:// ก่อนเอาไปใส่ href
     ค่าเหล่านี้มาจากชีต Config และจาก Drive — ผู้ดูแลแก้เองได้ จึงกันไว้อีกชั้นไม่ให้ใส่ลิงก์รูปแบบอื่นได้ */
@@ -760,10 +787,7 @@ function card(t, s) {
     + '<p class="cardp">' + esc(s) + '</p></div>';
 }
 function stepListHtml() {
-  const steps = (CFG && CFG.status_steps && CFG.status_steps.length)
-    ? CFG.status_steps
-    : ['บันทึกข้อมูลขอรับบริการ', 'บันทึกข้อมูลงบประมาณเข้าสู่ระบบ YRU ERP', 'งานการคลังออกใบเสร็จ',
-       'สำเนาใบเสร็จรับเงิน (สำเร็จ)', 'นำส่งใบเสร็จกลับไปยังแหล่งทุน'];
+  const steps = statusSteps();
   return steps.map(function (s) {
     return '<li><span class="d ' + (STATUS_DOT[s] || 'g') + '"></span><div class="tt">' + esc(s) + '</div></li>';
   }).join('');
@@ -1427,7 +1451,8 @@ function formStep3V() {
 
     + '<div class="frow">'
     + '  <div class="field"><label class="fl" for="receiptOrg">ชื่อหน่วยงานในใบเสร็จ <span class="req">*</span></label>'
-    + '    <input type="text" id="receiptOrg" maxlength="300" value="' + esc(ins.receiptOrg) + '">'
+    + '    <input type="text" id="receiptOrg" maxlength="300" list="receiptOrgOptions" value="' + esc(ins.receiptOrg) + '">'
+    + receiptOrgListHtml()
     + '    <div class="help">โปรดตรวจสอบ "ชื่อหน่วยงานในใบเสร็จ" ให้รอบคอบ เพื่อมิให้กระทบต่อหลักฐานสำคัญทางการเงินที่ส่งกลับไปยังแหล่งทุน</div>'
     + '    <div class="err-tx" id="eReceiptOrg" style="display:none"></div></div>'
     + '  <div class="field"><label class="fl" for="receiptDetail">รายละเอียดในใบเสร็จรับเงิน <span class="req">*</span></label>'
@@ -2168,13 +2193,17 @@ function detailV() {
     return '<div class="rrow"><span>' + esc(k) + '</span><b>' + fmtMoney(p.budget_distribution[k]) + ' บาท</b></div>';
   }).join('');
 
-  return '<div class="printhead"><b>แบบคำขอรับบริการออกใบเสร็จรับเงิน · SRDI External Fund</b><br>'
-    + 'สถาบันวิจัยและพัฒนาชายแดนภาคใต้ มหาวิทยาลัยราชภัฏยะลา · รหัสบริการ ' + esc(r.service_id || '') + '</div>'
-
-    + '<div class="sec-head noprint"><h2>รายละเอียด<b>แบบคำขอรับบริการ</b></h2>'
+  /* ★ ชุด H (มติ EF-D103): กล่อง .printhead ของด่าน 2.4 ถูกถอดออกแล้ว
+     ของเดิมคือหัวกระดาษจำลองที่โผล่เฉพาะตอนพิมพ์ทั้งหน้าเว็บ — วิธีนั้นเลิกใช้ทั้งชุด
+     หัวกระดาษของจริงอยู่ในแผ่น #printSheet ที่ printRequestForm() วาดขึ้นมา
+     🔴 ห้ามใส่ .printhead กลับมา จะกลายเป็นหัวกระดาษ 2 ชุดที่เพี้ยนจากกันภายหลัง (ตระกูล EF-D63) */
+  return '<div class="sec-head noprint"><h2>รายละเอียด<b>แบบคำขอรับบริการ</b></h2>'
     + '<span class="rt">' + esc(r.service_id || '') + '</span></div>'
+    /* ★ มติ EF-D102: ปุ่มพิมพ์อยู่ใน "กลุ่มปุ่มเดิม" ของหน้านี้ ไม่สร้างแถวปุ่มใหม่
+       ★ มติ EF-D105: ตัวเลือกงวดโผล่เฉพาะคำขอที่มีมากกว่า 1 งวด (ใบงวดเดียวเห็นแค่ปุ่ม) */
     + '<div class="btns noprint" style="margin:0 0 14px">'
-    + '  <button class="btn ghost" onclick="window.print()">🖨 พิมพ์แบบคำขอ</button>'
+    + '  <button class="btn ghost" onclick="printRequestForm(\'detail\')">🖨️ พิมพ์แบบคำขอ</button>'
+    + printScopeHtml('dtPrintScope', d.transactions)
     + '  <button class="btn ghost" data-page="track">← กลับหน้าติดตาม</button>'
     + '</div>'
 
@@ -2405,7 +2434,8 @@ function openReviseModal() {
     + '  <input type="number" step="0.01" id="rvAmount" value="' + esc(f.amount_received != null ? f.amount_received : '') + '">'
     + '  <div class="err-tx" id="eRvAmount" style="display:none"></div></div>'
     + '<div class="field"><label class="fl" for="rvOrg">ชื่อหน่วยงานในใบเสร็จ <span class="req">*</span></label>'
-    + '  <input type="text" id="rvOrg" maxlength="300" value="' + esc(f.receipt_org || '') + '">'
+    + '  <input type="text" id="rvOrg" maxlength="300" list="receiptOrgOptions" value="' + esc(f.receipt_org || '') + '">'
+    + receiptOrgListHtml()
     + '  <div class="err-tx" id="eRvOrg" style="display:none"></div></div>'
     + '<div class="field"><label class="fl" for="rvDetail">รายละเอียดในใบเสร็จรับเงิน <span class="req">*</span></label>'
     + '  <textarea id="rvDetail" maxlength="1000" rows="2">' + esc(f.receipt_detail || '') + '</textarea>'
@@ -2874,8 +2904,13 @@ function staffDetailBodyHtml() {
       + fmtMoney(p.budget_distribution[k]) + ' บาท</b></div>';
   }).join('');
 
+  /* ★ ชุด H (มติ EF-D102): ปุ่มพิมพ์ต่อท้ายในกลุ่มปุ่มเดิมของกล่องนี้ ไม่สร้างแถวใหม่
+     🔴 แผ่นกระดาษถูกวาดนอก modal เสมอ — กล่องนี้อยู่ใน .overlay ซึ่งโหมดพิมพ์ซ่อนทิ้ง
+        ถ้าวาดในนี้จะได้กระดาษเปล่า (ดูคำอธิบายเต็มใน styles.css หมวดชุด H) */
   return '<div class="btns" style="margin-bottom:10px">'
     + '  <button class="btn primary" id="btnSdCopy" onclick="copyStaffDetail()">📋 คัดลอกข้อมูลทั้งหมด</button>'
+    + '  <button class="btn ghost" onclick="printRequestForm(\'staff\')">🖨️ พิมพ์แบบคำขอ</button>'
+    + printScopeHtml('sdPrintScope', d.transactions)
     + '  <button class="btn ghost" onclick="openStaffDetail(\'' + esc(SDETAIL.tid) + '\')">↻ โหลดใหม่</button>'
     + '</div>'
     + '<div class="msg info">คัดลอกแล้วนำไปวางในระบบกลางของมหาวิทยาลัยได้ทันที '
@@ -3767,7 +3802,250 @@ function showWelcomeNotice() {
 }
 
 /* ============================================================
-   14) โหลด config + boot
+   14) ★ ชุด H — พิมพ์ "แบบคำขอ" เป็นแผ่นกระดาษ A4 จากหน้าเว็บ
+        (มติ EF-D101 ทับ EF-D60 · EF-D102 · EF-D103 · EF-D104 · EF-D105)
+   ------------------------------------------------------------
+   ทำไมเป็นทางนี้ (อย่าเปลี่ยนกลับ):
+     มติ EF-D60 เดิมสั่งให้หลังบ้านสร้าง PDF ด้วยตัวแปลง HTML→PDF ของ Apps Script
+     ตัวหยั่งเพดาน `05 Tools - QA/_PROBE_pdf.gs` สร้าง PDF ทดสอบ 11 ข้อบน GAS จริง
+     แล้วคุณสุ่ยเปิดดูเอง → **ภาษาไทยเพี้ยนเละ** ⇒ ทางนั้นตายถาวร (มติ EF-D101)
+     เบราว์เซอร์เป็นตัวเรนเดอร์ภาษาไทยที่ถูกต้องอยู่แล้ว จึงให้ผู้ใช้พิมพ์จากหน้าเว็บแทน
+     🔴 ห้ามกลับไปลองให้ GAS แปลง HTML→PDF อีก — พิสูจน์บนของจริงไปแล้ว
+
+   🔴 กติกาที่ห้ามผิด 3 ข้อ
+     ① แผ่นกระดาษต้องเป็น **ลูกตรงของ `<body>`** (กล่อง `#printSheet`)
+        ห้ามวาดใน `#stage` หรือใน `.overlay` — กล่องรายละเอียดของเจ้าหน้าที่อยู่ใน `.overlay`
+        ซึ่งโหมดพิมพ์ซ่อนทิ้ง ⇒ วาดในนั้นเมื่อไร เจ้าหน้าที่กดพิมพ์แล้วได้ **กระดาษเปล่า**
+     ② หน้าเว็บ **ไม่ตัดสินสถานะเอง** — ใช้ `step_index` / `is_revision` / `is_cancelled`
+        ที่หลังบ้านคำนวณมาให้ และชื่อขั้นจาก `statusSteps()` แหล่งเดียว
+     ③ ปุ่มพิมพ์อยู่ **2 หน้าเท่านั้น** (มติ EF-D102) และอยู่ในกลุ่มปุ่มเดิมของหน้านั้น
+        ห้ามใส่ในแถวงานย่อหรือตารางแดชบอร์ด (ปุ่มซ้ำทุกแถว = ตารางรก · ตระกูลกับดักข้อ 43)
+   ============================================================ */
+
+/* ชื่อหน่วยงานบนหัวกระดาษ — ถ้อยคำชุดเดียวกับท้ายเว็บใน index.html (ห้ามคิดคำใหม่ · มติ EF-D5) */
+const PRINT_ORG_NAME = 'สถาบันวิจัยและพัฒนาชายแดนภาคใต้';
+const PRINT_ORG_SUB  = 'มหาวิทยาลัยราชภัฏยะลา · งานบริหารทั่วไป สำนักงานผู้อำนวยการ';
+/* โดเมนที่ใช้จริงของระบบ (มติ EF-D41) — ใช้เมื่ออ่านชื่อโฮสต์จากเบราว์เซอร์ไม่ได้ */
+const PRINT_SITE_HOST = 'external-fund.pages.dev';
+
+/** กล่องกระดาษ — สร้างครั้งเดียวแล้วใช้ซ้ำ · ต้องเป็นลูกตรงของ <body> เท่านั้น */
+function printSheetEl() {
+  let el = $('printSheet');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'printSheet';
+    el.setAttribute('aria-hidden', 'true');   // บนจอซ่อนอยู่ — ไม่ให้โปรแกรมอ่านหน้าจออ่านซ้ำ
+    document.body.appendChild(el);
+  }
+  return el;
+}
+
+/** โลโก้จริงโหลดไม่ขึ้น (ออฟไลน์/ไฟล์หาย) → แทนด้วยกล่องเขียวแบบเดียวกับไฟล์ตัวอย่างที่อนุมัติ */
+function phLogoFallback(img) {
+  if (!img || !img.parentNode) return;
+  const box = document.createElement('div');
+  box.className = 'ph-logo ph-logofb';
+  box.textContent = 'SRDI';
+  img.parentNode.replaceChild(box, img);
+}
+
+/** บรรทัดติดต่อบนหัวกระดาษ — เอาจากชีตก่อน (คีย์เดิม ไม่เพิ่มคีย์ใหม่) */
+function phContactLine() {
+  const c = [];
+  if (CFG && CFG.contact_phone) c.push('โทร ' + CFG.contact_phone);
+  if (CFG && CFG.contact_email) c.push(CFG.contact_email);
+  return c.length ? c.join(' · ') : 'โทรภายใน 31004 · Kantakan.u@yru.ac.th';
+}
+
+/** 1 แถวของตารางป้าย/ค่า — ช่องที่ไม่มีค่าไม่ต้องพิมพ์ออกมา (เหมือน dt() ของหน้าจอ) */
+function phKv(k, v) {
+  if (v == null || v === '') return '';
+  return '<tr><td class="k">' + esc(k) + '</td><td class="v">' + esc(v) + '</td></tr>';
+}
+
+/**
+ * ตัวเลือก "พิมพ์งวดไหน" (มติ EF-D105)
+ * 🔴 โผล่เฉพาะคำขอที่มีมากกว่า 1 งวด — คำขอที่มีงวดเดียว (ทุกใบในระบบตอนนี้)
+ *    จะเห็นแค่ปุ่มเดียว หน้าตาตรงกับแบบที่คุณสุ่ยอนุมัติทุกประการ
+ * ★ วางในกลุ่มปุ่มเดิม ไม่สร้างแถวใหม่ (มติ EF-D102)
+ */
+function printScopeHtml(id, txs) {
+  const list = txs || [];
+  if (list.length < 2) return '';
+  return '<select id="' + esc(id) + '" aria-label="เลือกงวดที่จะพิมพ์" style="width:auto;max-width:240px">'
+    + '<option value="">พิมพ์ทุกงวด (' + esc(list.length) + ' งวด)</option>'
+    + list.map(function (t) {
+        return '<option value="' + esc(t.transaction_id) + '">พิมพ์เฉพาะงวดที่ ' + esc(t.installment_no) + '</option>';
+      }).join('')
+    + '</select>';
+}
+
+/**
+ * แถบขั้นตอน 5 ขั้นของ 1 งวด
+ * 🔴 งวดที่ "คร่อมขั้น" (รอการแก้ไข / ยกเลิกบริการ) ไม่มีตำแหน่งบนแถบ — หลังบ้านส่ง step_index = -1 มา
+ *    ต้องพิมพ์เป็นข้อความบอกสถานะจริงแทน ห้ามเดาว่าอยู่ขั้นไหน (กับดักข้อ 45)
+ */
+function phStepsHtml(t) {
+  const steps = statusSteps();
+  const idx = Number(t.step_index);
+  if (t.is_cancelled || t.is_revision || !(idx >= 0)) {
+    return '<div class="ph-off">สถานะปัจจุบัน: <b>' + esc(t.status || '—') + '</b>'
+      + (t.revision_reason ? '<span class="ph-sub">สิ่งที่ขอให้แก้ไข: ' + esc(t.revision_reason) + '</span>' : '')
+      + '</div>';
+  }
+  return '<div class="ph-steps">'
+    + steps.map(function (s, i) {
+        return '<div class="ph-step' + (i <= idx ? ' done' : '') + (i === idx ? ' now' : '') + '">'
+          + esc(s) + '</div>';
+      }).join('')
+    + '</div>'
+    + '<div class="ph-note">สถานะปัจจุบัน: <b>' + esc(t.status || '') + '</b> (ขั้นที่ '
+    + esc(idx + 1) + ' จาก ' + esc(steps.length) + ')</div>';
+}
+
+/**
+ * วาดแผ่นกระดาษทั้งแผ่นจากคำตอบของ serviceDetail / staffServiceDetail
+ * (ทั้งสองประตูคืนโครงเดียวกันเพราะเรียกแกนกลาง serviceDetailCore_() ตัวเดียวกัน · มติ EF-D63)
+ * @param {Object} d       ก้อนข้อมูลจากหลังบ้าน
+ * @param {string} onlyTid เลขที่ธุรกรรมที่ต้องการพิมพ์เดี่ยว ('' = ทุกงวด)
+ */
+function printSheetHtml(d, onlyTid) {
+  const r = d.requester || {}, p = d.project || {};
+  const all = d.transactions || [];
+  const picked = onlyTid
+    ? all.filter(function (t) { return String(t.transaction_id) === String(onlyTid); })
+    : all;
+  // 🔴 ถ้ารหัสงวดที่เลือกไม่ตรงกับข้อมูลชุดที่โหลดมา ให้พิมพ์ทุกงวด — ดีกว่าปล่อยกระดาษเปล่าออกมา
+  const rows = picked.length ? picked : all;
+  const many = rows.length > 1;
+
+  const dist = p.budget_distribution || {};
+  // ★ สัญญาของชุด H: แสดงเฉพาะหน่วยงานที่ได้รับจัดสรรจริง (> 0) — 0 บาทไม่ต้องพิมพ์
+  const distKeys = Object.keys(dist).filter(function (k) { return numOf(dist[k]) > 0; });
+  const rowSum = rows.reduce(function (a, t) { return a + numOf(t.amount_received); }, 0);
+
+  const contactParts = [r.phone, r.email].filter(function (x) { return x; });
+  /* 🔴 ที่อยู่เว็บบนกระดาษต้องเป็นค่าคงที่ ห้ามอ่านจาก location.hostname
+     ที่มา: เดินของจริงในสนามทดสอบแล้วกระดาษพิมพ์ออกมาว่า "ติดตามสถานะล่าสุดได้ที่ 127.0.0.1"
+     ⇒ เอกสารราชการที่ผู้ขอถือไป จะบอกที่อยู่ที่ใครก็เปิดไม่ได้ ถ้าวันไหนมีคนเปิดเว็บจากที่อื่น
+     ★ โดเมนของระบบเป็นค่าที่ตัดสินไว้แล้วในมติ EF-D41 — ใช้ค่านั้นเสมอ */
+  const site = PRINT_SITE_HOST;
+
+  return ''
+    /* ---------- หัวกระดาษ ---------- */
+    + '<div class="ph-head">'
+    + '<img class="ph-logo" src="assets/srdi_logo.png" alt="" onerror="phLogoFallback(this)">'
+    + '<div class="ph-org"><b>' + esc(PRINT_ORG_NAME) + '</b>'
+    + '<span>' + esc(PRINT_ORG_SUB) + '</span>'
+    + '<span>' + esc(phContactLine()) + '</span></div>'
+    + '<div class="ph-meta">เลขที่คำขอ<br><span class="ph-sid">' + esc(r.service_id || '—') + '</span><br>'
+    + 'พิมพ์เมื่อ ' + fmtDate(new Date(), true) + '</div>'
+    + '</div>'
+
+    + '<div class="ph-title"><h1>แบบคำขอรับบริการออกใบเสร็จรับเงิน</h1>'
+    + '<p>งบประมาณวิจัยจากแหล่งทุนภายนอก'
+    + (p.fiscal_year ? ' · ปีงบประมาณ พ.ศ. ' + esc(p.fiscal_year) : '') + '</p></div>'
+
+    /* ---------- ส่วนที่ 1 ---------- */
+    + '<div class="ph-sec"><h2>ส่วนที่ 1 · ข้อมูลผู้ขอรับบริการ</h2><table class="ph-kv">'
+    + phKv('ชื่อ-สกุล', r.full_name)
+    + phKv('ประเภทบุคลากร', r.staff_type)
+    + phKv('ชื่อโครงการวิจัยที่รับผิดชอบ', r.researcher_project)
+    + phKv('หน่วยงาน', r.faculty)
+    + phKv('หน่วยงานย่อย', r.sub_unit)
+    + phKv('โทรศัพท์ · อีเมล', contactParts.join(' · '))
+    + '</table></div>'
+
+    /* ---------- ส่วนที่ 2 ---------- */
+    + '<div class="ph-sec"><h2>ส่วนที่ 2 · ข้อมูลโครงการวิจัย</h2><table class="ph-kv">'
+    + phKv('ชื่อโครงการ', p.project_title)
+    + phKv('แหล่งทุน', p.funding_source)
+    + phKv('งบประมาณทั้งโครงการ', fmtMoney(p.total_budget) + ' บาท')
+    + phKv('ระยะเวลาดำเนินการ', fmtDate(p.period_start) + ' – ' + fmtDate(p.period_end))
+    + phKv('รหัสอ้างอิงโครงการ', p.ref_service_id)
+    + '</table></div>'
+
+    /* ---------- ส่วนที่ 3 ---------- */
+    + '<div class="ph-sec"><h2>ส่วนที่ 3 · การกระจายงบประมาณตามหน่วยงาน</h2>'
+    + '<table class="ph-grid">'
+    + '<tr><th>หน่วยงาน</th><th class="ph-num" style="width:34%">จำนวนเงิน (บาท)</th></tr>'
+    + (distKeys.length
+        ? distKeys.map(function (k) {
+            return '<tr><td>' + esc(k) + '</td><td class="ph-num">' + fmtMoney(dist[k]) + '</td></tr>';
+          }).join('')
+        : '<tr><td colspan="2">ไม่ได้ระบุการกระจายงบประมาณตามหน่วยงาน</td></tr>')
+    + '<tr class="ph-sum"><td>รวมทั้งสิ้น</td><td class="ph-num">'
+    + fmtMoney(p.budget_distribution_sum)
+    + (p.budget_sum_matches
+        ? ' <span class="ph-ok">✓ ตรงกับงบโครงการ</span>'
+        : ' <span class="ph-bad">(ไม่ตรงกับงบโครงการ ' + fmtMoney(p.total_budget) + ')</span>')
+    + '</td></tr></table>'
+    + '<div class="ph-note">แสดงเฉพาะหน่วยงานที่ได้รับจัดสรร · หน่วยงานที่ได้รับ 0 บาท ไม่นำมาแสดงเพื่อให้อ่านง่าย</div>'
+    + '</div>'
+
+    /* ---------- ส่วนที่ 4 ---------- */
+    + '<div class="ph-sec"><h2>ส่วนที่ 4 · รายละเอียดงวดเงินที่ขอออกใบเสร็จ</h2>'
+    + '<table class="ph-grid">'
+    + '<tr><th style="width:9%">งวดที่</th><th>หน่วยงานผู้ออกใบเสร็จ / รายละเอียด</th>'
+    + '<th class="ph-num" style="width:24%">จำนวนเงินที่รับ (บาท)</th></tr>'
+    + rows.map(function (t) {
+        return '<tr><td>' + esc(t.installment_no) + '</td><td>' + esc(t.receipt_org || '—')
+          + (t.receipt_detail ? '<span class="ph-sub">' + esc(t.receipt_detail) + '</span>' : '')
+          + '</td><td class="ph-num">' + fmtMoney(t.amount_received) + '</td></tr>';
+      }).join('')
+    + '<tr class="ph-sum"><td colspan="2">รวมเงินที่ขอออกใบเสร็จ</td><td class="ph-num">'
+    + fmtMoney(rowSum) + '</td></tr></table>'
+    + rows.map(function (t) {
+        return '<div class="ph-note">'
+          + (many ? 'งวดที่ ' + esc(t.installment_no) + ' · ' : '')
+          + 'เลขที่ธุรกรรม <b>' + esc(t.transaction_id) + '</b> · ยื่นคำขอเมื่อ ' + fmtDate(t.submitted_at, true)
+          + (numOf(t.revision_count) > 0
+              ? ' &nbsp;<span class="ph-flag">เคยส่งกลับให้แก้ไข ' + esc(t.revision_count) + ' ครั้ง</span>' : '')
+          + '</div>';
+      }).join('')
+    + '</div>'
+
+    /* ---------- ส่วนที่ 5 ---------- */
+    + '<div class="ph-sec"><h2>ส่วนที่ 5 · สถานะการดำเนินงาน</h2>'
+    + rows.map(function (t) {
+        return (many ? '<div class="ph-note" style="margin-top:9px"><b>งวดที่ ' + esc(t.installment_no) + '</b></div>' : '')
+          + phStepsHtml(t);
+      }).join('')
+    + '<div class="ph-note">ติดตามสถานะล่าสุดได้ที่ ' + esc(site) + '</div>'
+    + '</div>'
+
+    /* ---------- ช่องลงนาม ---------- */
+    + '<div class="ph-sign">'
+    + '<div><span class="ph-ln"></span>( ................................................ )<br>'
+    + '<span class="ph-role">ผู้ขอรับบริการ<br>วันที่ ......... / ......... / .............</span></div>'
+    + '<div><span class="ph-ln"></span>( ................................................ )<br>'
+    + '<span class="ph-role">เจ้าหน้าที่ผู้รับคำขอ<br>วันที่ ......... / ......... / .............</span></div>'
+    + '</div>'
+
+    /* ---------- ท้ายกระดาษ (ตรึงทุกหน้าตอนพิมพ์) ----------
+       ★ ไม่พิมพ์ "หน้า 1/1" แบบไฟล์ตัวอย่าง เพราะ HTML/CSS นับจำนวนหน้าจริงไม่ได้
+         เลขที่พิมพ์ออกมาจะเป็นเลขปลอมทันทีที่เอกสารยาวเกิน 1 หน้า */
+    + '<div class="ph-foot"><span>SRDI External Fund 2.0 · เอกสารนี้พิมพ์จากระบบ ไม่ต้องประทับตรา</span>'
+    + '<span>' + esc(r.service_id || '') + '</span></div>';
+}
+
+/**
+ * ปุ่ม "🖨️ พิมพ์แบบคำขอ" — ใช้ร่วมกันทั้ง 2 หน้า (มติ EF-D102)
+ * @param {string} which 'detail' = หน้าของผู้ขอ · 'staff' = กล่องรายละเอียดของเจ้าหน้าที่
+ */
+function printRequestForm(which) {
+  const d = (which === 'staff') ? SDETAIL.data : DETAIL.data;
+  if (!d || !(d.transactions || []).length) {
+    toast('ยังไม่มีข้อมูลคำขอให้พิมพ์ กรุณารอให้โหลดเสร็จก่อน');
+    return;
+  }
+  const sel = $(which === 'staff' ? 'sdPrintScope' : 'dtPrintScope');
+  printSheetEl().innerHTML = printSheetHtml(d, sel ? String(sel.value || '') : '');
+  window.print();
+}
+
+/* ============================================================
+   15) โหลด config + boot
    ============================================================ */
 function paintTestBanner() {
   const b = $('testBanner');
@@ -3834,6 +4112,15 @@ function boot() {
   });
 
   window.addEventListener('popstate', renderFromUrl);
+
+  /* ★ ชุด H: พิมพ์เสร็จแล้วล้างเนื้อในแผ่นกระดาษทิ้ง
+     เหตุผล 2 ข้อ: ① ข้อมูลของคำขอใบก่อนจะไม่ค้างใน DOM ให้หลุดไปกับการพิมพ์ครั้งถัดไป
+     ② เป็นข้อมูลส่วนบุคคล (ชื่อ · เบอร์โทร · อีเมล) ไม่ควรค้างไว้เกินความจำเป็น (PDPA)
+     ★ ปลอดภัยเพราะ printRequestForm() วาดใหม่ทุกครั้งก่อนสั่งพิมพ์อยู่แล้ว */
+  window.addEventListener('afterprint', function () {
+    const ps = $('printSheet');
+    if (ps) ps.innerHTML = '';
+  });
 
   if (API_URL === API_PLACEHOLDER) {
     showBanner('⚠️ ยังไม่ได้ตั้งค่า API_URL — ผู้ดูแลระบบต้องวาง /exec URL ในไฟล์ app.js ก่อน '
