@@ -32,7 +32,7 @@
    (ห้ามใช้ URL ที่ลงท้ายด้วย /dev — ตัวนั้นใช้ได้เฉพาะตอนที่ท่านล็อกอินบัญชีเจ้าของสคริปต์อยู่)
    ดูขั้นตอนใน README_Phase2_วิธีติดตั้ง.md หมวด 14 (ตาราง "บัญชีจุดที่ต้องกรอกเอง")
 */
-const API_URL = 'https://script.google.com/macros/s/AKfycbydKxpRgWhFxBgxT4Dfk-YMzaM8s_Gi797ylvabLSM-G5yQO57nith6VrCwQKqn9f80-w/exec';
+const API_URL = 'PASTE_WEBAPP_EXEC_URL_HERE';
 
 /* ============================================================
    0) ค่าคงที่ของหน้าเว็บ
@@ -3828,6 +3828,10 @@ const PRINT_ORG_SUB  = 'มหาวิทยาลัยราชภัฏย�
 /* โดเมนที่ใช้จริงของระบบ (มติ EF-D41) — ใช้เมื่ออ่านชื่อโฮสต์จากเบราว์เซอร์ไม่ได้ */
 const PRINT_SITE_HOST = 'external-fund.pages.dev';
 
+/* ★ EF-S34 — ที่จดชื่อหน้าเว็บเดิมไว้ระหว่างพิมพ์ (ค่าว่าง = ไม่มีอะไรค้างให้คืน)
+   🔴 ต้องเป็นตัวแปรตัวเดียวของทั้งเว็บ ห้ามแยกตามหน้า — ตัวจับ afterprint มีตัวเดียวเช่นกัน */
+let PRINT_PREV_TITLE = '';
+
 /** กล่องกระดาษ — สร้างครั้งเดียวแล้วใช้ซ้ำ · ต้องเป็นลูกตรงของ <body> เท่านั้น */
 function printSheetEl() {
   let el = $('printSheet');
@@ -4030,6 +4034,30 @@ function printSheetHtml(d, onlyTid) {
 }
 
 /**
+ * ชื่อเอกสารที่จะให้เบราว์เซอร์ใช้ตอนพิมพ์ (มติ EF-S34)
+ * 🔴 เบราว์เซอร์ตั้ง "ชื่อไฟล์ตั้งต้น" ตอนบันทึกเป็น PDF จาก document.title เท่านั้น
+ *    ไม่มีคำสั่งอื่นให้ตั้งชื่อไฟล์ได้เลย ⇒ ต้องเปลี่ยนชื่อหน้าเว็บชั่วคราวแล้วคืนค่า
+ * ★ เลือกพิมพ์เฉพาะงวด ต้องมีเลขงวดต่อท้ายด้วย ไม่งั้นพิมพ์งวดที่ 1 กับงวดที่ 2 ของใบเดียวกัน
+ *   ก็ยังได้ชื่อไฟล์ชนกันอยู่ดี (= อาการเดิมที่กำลังแก้ แค่ย้ายไปอยู่ในใบเดียว)
+ * @param {Object} d       ก้อนข้อมูลจากหลังบ้าน
+ * @param {string} onlyTid เลขที่ธุรกรรมที่เลือกพิมพ์เดี่ยว ('' = ทุกงวด)
+ * @return {string} ชื่อที่จะใช้ · '' = ไม่มีเลขที่คำขอ ให้ปล่อยชื่อหน้าเว็บไว้เหมือนเดิม
+ */
+function printDocTitle(d, onlyTid) {
+  const data = d || {};
+  /* 🔴 อักขระที่ Windows/macOS ห้ามใช้ในชื่อไฟล์ ต้องถอดทิ้งก่อน
+     ไม่งั้นวันไหนรูปแบบรหัสเปลี่ยนจนมีอักขระพวกนี้ กล่องบันทึกไฟล์จะเพี้ยนโดยไม่มีใครรู้ */
+  const safe = function (s) { return String(s == null ? '' : s).replace(/[\\/:*?"<>|]/g, '').trim(); };
+  const sid = safe((data.requester || {}).service_id);
+  if (!sid) return '';
+  const all = data.transactions || [];
+  const one = onlyTid
+    ? all.filter(function (t) { return String(t.transaction_id) === String(onlyTid); })[0]
+    : null;
+  return (one && all.length > 1) ? sid + ' งวดที่ ' + safe(one.installment_no) : sid;
+}
+
+/**
  * ปุ่ม "🖨️ พิมพ์แบบคำขอ" — ใช้ร่วมกันทั้ง 2 หน้า (มติ EF-D102)
  * @param {string} which 'detail' = หน้าของผู้ขอ · 'staff' = กล่องรายละเอียดของเจ้าหน้าที่
  */
@@ -4040,7 +4068,19 @@ function printRequestForm(which) {
     return;
   }
   const sel = $(which === 'staff' ? 'sdPrintScope' : 'dtPrintScope');
-  printSheetEl().innerHTML = printSheetHtml(d, sel ? String(sel.value || '') : '');
+  const tid = sel ? String(sel.value || '') : '';
+  printSheetEl().innerHTML = printSheetHtml(d, tid);
+  /* ★ EF-S34: ตั้งชื่อเอกสาร "ก่อน" สั่งพิมพ์ แล้วคืนค่าเดิมที่ afterprint
+     🔴 จดค่าเดิมไว้จาก document.title ตรง ๆ ห้ามประกอบชื่อใหม่จาก CFG ตอนคืนค่า —
+        ถ้าหลังบ้านยังโหลด config ไม่เสร็จตอนกดพิมพ์ จะคืนได้ชื่อคนละอันกับที่ผู้ใช้เห็นก่อนกด */
+  /* 🐛 เกราะที่เพิ่มหลังเดินเบราว์เซอร์จริง: จดชื่อเดิมเฉพาะ "ครั้งแรกที่ยังไม่มีของค้าง"
+     อาการที่เจอ: ถ้ามีการสั่งพิมพ์ 2 ครั้งโดยที่ afterprint ยังไม่ทำงานคั่น
+     รุ่นแรกจะจดทับของเดิมด้วย "เลขที่คำขอ" แล้วตอนคืนค่าจะได้ชื่อหน้าเว็บเป็นเลขที่คำขอถาวร */
+  const t = printDocTitle(d, tid);
+  if (t) {
+    if (!PRINT_PREV_TITLE) PRINT_PREV_TITLE = document.title;
+    document.title = t;
+  }
   window.print();
 }
 
@@ -4120,6 +4160,10 @@ function boot() {
   window.addEventListener('afterprint', function () {
     const ps = $('printSheet');
     if (ps) ps.innerHTML = '';
+    /* ★ EF-S34: คืนชื่อหน้าเว็บเดิม — ถ้าไม่คืน แท็บจะค้างเป็นเลขที่คำขอไปตลอดทั้ง session
+       และผู้ใช้ที่ bookmark หน้านั้นไว้จะได้ชื่อ bookmark เป็นเลขที่คำขอของคนอื่น
+       ★ ล้างตัวจดทิ้งด้วย เพื่อให้การพิมพ์ครั้งถัดไปเริ่มจดใหม่จากศูนย์ */
+    if (PRINT_PREV_TITLE) { document.title = PRINT_PREV_TITLE; PRINT_PREV_TITLE = ''; }
   });
 
   if (API_URL === API_PLACEHOLDER) {
