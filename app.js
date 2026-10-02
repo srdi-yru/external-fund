@@ -38,7 +38,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbydKxpRgWhFxBgxT4Dfk-YM
    0) ค่าคงที่ของหน้าเว็บ
    ============================================================ */
 const API_PLACEHOLDER = 'PASTE_WEBAPP_EXEC_URL_HERE';
-const API_TIMEOUT_MS  = 45000;        // ไฟล์แนบทำให้ช้ากว่าปกติ จึงเผื่อไว้ 45 วินาที
+const API_TIMEOUT_MS  = 100000;        // ไฟล์แนบทำให้ช้ากว่าปกติ จึงเผื่อไว้ 100 วินาที
 /* ★ เฟส 3 เพิ่ม 3 หน้า: staff (เข้าสู่ระบบเจ้าหน้าที่) · admin (แดชบอร์ด) · assistant (คิวงาน)
    ★ ชุด B เพิ่ม 2 หน้าของ admin: staffreg (ทะเบียนเจ้าหน้าที่ · EF-S16) · audit (ร่องรอยการใช้งาน · EF-S17) */
 /* ★ ชุด L เพิ่ม 1 หน้า: stats (สถิติสาธารณะ · EF-S4)
@@ -238,7 +238,7 @@ async function api(action, params) {
     const aborted = e && e.name === 'AbortError';
     throw {
       error: aborted ? 'TIMEOUT' : 'NETWORK',
-      msg: aborted ? 'หมดเวลาเชื่อมต่อ (45 วินาที) — กรุณาลองใหม่อีกครั้ง'
+      msg: aborted ? 'หมดเวลาเชื่อมต่อ (100 วินาที) — กรุณาลองใหม่อีกครั้ง'
                    : 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ — กรุณาตรวจอินเทอร์เน็ตแล้วลองใหม่'
     };
   }
